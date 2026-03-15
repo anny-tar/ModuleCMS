@@ -1,4 +1,11 @@
+{% load media_tags %}
 <section class="section-hero">
+    {% if data.image_id %}
+        {% get_media data.image_id as hero_image %}
+        {% if hero_image %}
+            <img src="{{ hero_image.url }}" alt="{{ hero_image.alt_text }}">
+        {% endif %}
+    {% endif %}
     <h1>{{ data.heading }}</h1>
     {% if data.subheading %}
         <p>{{ data.subheading }}</p>

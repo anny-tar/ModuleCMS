@@ -1,3 +1,4 @@
+{% load media_tags %}
 <section class="section-team">
     {% if section.title %}
         <h2>{{ section.title }}</h2>
@@ -5,6 +6,12 @@
     <div class="team-grid">
         {% for item in data.items %}
             <div class="team-card">
+                {% if item.photo_id %}
+                    {% get_media item.photo_id as photo %}
+                    {% if photo %}
+                        <img src="{{ photo.url }}" alt="{{ item.name }}">
+                    {% endif %}
+                {% endif %}
                 <h3>{{ item.name }}</h3>
                 <p class="position">{{ item.position }}</p>
                 {% if item.description %}
