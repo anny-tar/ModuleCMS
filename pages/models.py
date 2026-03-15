@@ -53,6 +53,7 @@ class Section(models.Model):
         FORM         = 'form',         'Форма обратной связи'
         FAQ          = 'faq',          'Вопросы и ответы'
         TESTIMONIALS = 'testimonials', 'Отзывы'
+        CONTACTS = 'contacts', 'Контактная информация'
 
     page       = models.ForeignKey(Page, on_delete=models.CASCADE,
                                    related_name='sections', verbose_name='Страница')

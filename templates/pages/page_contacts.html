@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page.seo_title|default:page.title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ page.title }}</h1>
+
+    {% for section in sections %}
+        {% if section.is_visible %}
+            {% with data=section.data %}
+                <div class="contacts-block">
+                    {% if data.address %}
+                        <div class="contact-address">
+                            <h3>Адрес</h3>
+                            <p>{{ data.address }}</p>
+                        </div>
+                    {% endif %}
+                    {% if data.phones %}
+                        <div class="contact-phones">
+                            <h3>Телефоны</h3>
+                            {% for phone in data.phones %}
+                                <p><a href="tel:{{ phone }}">{{ phone }}</a></p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if data.email %}
+                        <div class="contact-email">
+                            <h3>Email</h3>
+                            <p><a href="mailto:{{ data.email }}">{{ data.email }}</a></p>
+                        </div>
+                    {% endif %}
+                    {% if data.schedule %}
+                        <div class="contact-schedule">
+                            <h3>Режим работы</h3>
+                            <p>{{ data.schedule }}</p>
+                        </div>
+                    {% endif %}
+                    {% if data.map_embed %}
+                        <div class="contact-map">
+                            {{ data.map_embed|safe }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endwith %}
+        {% endif %}
+    {% endfor %}
+{% endblock %}
