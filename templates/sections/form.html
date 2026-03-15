@@ -1,0 +1,24 @@
+<section class="section-form">
+    {% if section.title %}
+        <h2>{{ section.title }}</h2>
+    {% endif %}
+    <form method="post" action="/leads/submit/{{ section.id }}/">
+        {% csrf_token %}
+        {% for field in data.fields %}
+            <div class="form-field">
+                <label>
+                    {{ field.label }}
+                    {% if field.required %}<span>*</span>{% endif %}
+                </label>
+                {% if field.type == 'textarea' %}
+                    <textarea name="{{ field.name }}"
+                        {% if field.required %}required{% endif %}></textarea>
+                {% else %}
+                    <input type="{{ field.type }}" name="{{ field.name }}"
+                        {% if field.required %}required{% endif %}>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit">Отправить</button>
+    </form>
+</section>

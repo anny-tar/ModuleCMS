@@ -1,0 +1,15 @@
+<section class="section-steps">
+    {% if section.title %}
+        <h2>{{ section.title }}</h2>
+    {% endif %}
+    <ol class="steps-list">
+        {% for item in data.items %}
+            <li class="step-item">
+                <span class="step-title">{{ item.title }}</span>
+                {% if item.description %}
+                    <p>{{ item.description }}</p>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ol>
+</section>

@@ -1,0 +1,13 @@
+<section class="section-faq">
+    {% if section.title %}
+        <h2>{{ section.title }}</h2>
+    {% endif %}
+    <dl class="faq-list">
+        {% for item in data.items %}
+            <div class="faq-item">
+                <dt>{{ item.question }}</dt>
+                <dd>{{ item.answer }}</dd>
+            </div>
+        {% endfor %}
+    </dl>
+</section>

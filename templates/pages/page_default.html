@@ -14,6 +14,20 @@
                     {% include 'sections/counters.html' %}
                 {% elif section.type == 'cards' %}
                     {% include 'sections/cards.html' %}
+                {% elif section.type == 'team' %}
+                    {% include 'sections/team.html' %}
+                {% elif section.type == 'steps' %}
+                    {% include 'sections/steps.html' %}
+                {% elif section.type == 'table' %}
+                    {% include 'sections/table.html' %}
+                {% elif section.type == 'chart_pie' %}
+                    {% include 'sections/chart_pie.html' %}
+                {% elif section.type == 'form' %}
+                    {% include 'sections/form.html' %}
+                {% elif section.type == 'faq' %}
+                    {% include 'sections/faq.html' %}
+                {% elif section.type == 'testimonials' %}
+                    {% include 'sections/testimonials.html' %}
                 {% endif %}
             {% endwith %}
         {% endif %}

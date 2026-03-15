@@ -2,15 +2,24 @@ from django.contrib import admin
 from django import forms as django_forms
 from .models import Page, Section
 from .forms import (HeroSectionForm, TextSectionForm,
-                    CountersSectionForm, CardsSectionForm)
+                    CountersSectionForm, CardsSectionForm,
+                    TeamSectionForm, StepsSectionForm,
+                    TableSectionForm, ChartPieSectionForm,
+                    FormSectionForm, FaqSectionForm,
+                    TestimonialsSectionForm)
 
-
-# Сопоставление типа секции с классом формы
 SECTION_FORM_MAP = {
-    'hero':     HeroSectionForm,
-    'text':     TextSectionForm,
-    'counters': CountersSectionForm,
-    'cards':    CardsSectionForm,
+    'hero':         HeroSectionForm,
+    'text':         TextSectionForm,
+    'counters':     CountersSectionForm,
+    'cards':        CardsSectionForm,
+    'team':         TeamSectionForm,
+    'steps':        StepsSectionForm,
+    'table':        TableSectionForm,
+    'chart_pie':    ChartPieSectionForm,
+    'form':         FormSectionForm,
+    'faq':          FaqSectionForm,
+    'testimonials': TestimonialsSectionForm,
 }
 
 
