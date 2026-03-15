@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'adminsortable2', # drag-and-drop сортировка
     # Приложения проекта
     'pages',
     'navigation',
