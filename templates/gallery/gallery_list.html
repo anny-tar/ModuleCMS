@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Галерея{% endblock %}
+
+{% block content %}
+    <h1>Галерея</h1>
+    <div class="albums-grid">
+        {% for album in albums %}
+            <div class="album-card">
+                {% if album.cover %}
+                    <a href="/gallery/{{ album.id }}/">
+                        <img src="{{ album.cover.url }}" alt="{{ album.title }}">
+                    </a>
+                {% endif %}
+                <h2><a href="/gallery/{{ album.id }}/">{{ album.title }}</a></h2>
+                {% if album.description %}
+                    <p>{{ album.description }}</p>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p>Альбомов пока нет.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

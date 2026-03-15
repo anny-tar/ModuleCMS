@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ album.title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ album.title }}</h1>
+    {% if album.description %}
+        <p>{{ album.description }}</p>
+    {% endif %}
+    <div class="photos-grid">
+        {% for photo in photos %}
+            <div class="photo-item">
+                <img src="{{ photo.file.url }}" alt="{{ photo.caption }}">
+                {% if photo.caption %}
+                    <p>{{ photo.caption }}</p>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p>Фотографий пока нет.</p>
+        {% endfor %}
+    </div>
+    <a href="/gallery/">← Все альбомы</a>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Новости{% endblock %}
+
+{% block content %}
+    <h1>Новости</h1>
+
+    {% if categories %}
+        <div class="categories">
+            <a href="/news/">Все</a>
+            {% for cat in categories %}
+                <a href="/news/?category={{ cat.slug }}">{{ cat.name }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="articles-grid">
+        {% for article in articles %}
+            <div class="article-card">
+                {% if article.cover %}
+                    <img src="{{ article.cover.url }}" alt="{{ article.title }}">
+                {% endif %}
+                <h2><a href="{{ article.get_absolute_url }}">{{ article.title }}</a></h2>
+                {% if article.announce %}
+                    <p>{{ article.announce }}</p>
+                {% endif %}
+                <time>{{ article.published_at|date:"d.m.Y" }}</time>
+            </div>
+        {% empty %}
+            <p>Новостей пока нет.</p>
+        {% endfor %}
+    </div>
+{% endblock %}
