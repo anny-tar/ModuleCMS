@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.utils.html import format_html
 from .models import LeadSubmission
 
 
@@ -15,4 +14,5 @@ class LeadSubmissionAdmin(admin.ModelAdmin):
     def data_preview(self, obj):
         # Краткий просмотр данных заявки в списке
         items = [f'{k}: {v}' for k, v in obj.data.items()]
-        return format_html('<br>'.join(items[:3]))
+        preview = ' | '.join(items[:3])
+        return preview
