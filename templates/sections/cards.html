@@ -1,0 +1,16 @@
+<section class="section-cards">
+    {% if section.title %}
+        <h2>{{ section.title }}</h2>
+    {% endif %}
+    <div class="cards-grid">
+        {% for item in data.items %}
+            <div class="card">
+                {% if item.icon %}
+                    <div class="card-icon">{{ item.icon }}</div>
+                {% endif %}
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.text }}</p>
+            </div>
+        {% endfor %}
+    </div>
+</section>

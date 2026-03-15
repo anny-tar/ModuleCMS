@@ -1,0 +1,13 @@
+<section class="section-counters">
+    {% if section.title %}
+        <h2>{{ section.title }}</h2>
+    {% endif %}
+    <div class="counters-grid">
+        {% for item in data.items %}
+            <div class="counter-item">
+                <span class="counter-value">{{ item.value }}</span>
+                <span class="counter-label">{{ item.label }}</span>
+            </div>
+        {% endfor %}
+    </div>
+</section>

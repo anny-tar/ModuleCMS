@@ -3,13 +3,19 @@
 {% block title %}{{ page.seo_title|default:page.title }}{% endblock %}
 
 {% block content %}
-    <h1>{{ page.title }}</h1>
-
     {% for section in sections %}
         {% if section.is_visible %}
-            <section id="section-{{ section.id }}">
-                <p>Тип: {{ section.get_type_display }}</p>
-            </section>
+            {% with data=section.data %}
+                {% if section.type == 'hero' %}
+                    {% include 'sections/hero.html' %}
+                {% elif section.type == 'text' %}
+                    {% include 'sections/text.html' %}
+                {% elif section.type == 'counters' %}
+                    {% include 'sections/counters.html' %}
+                {% elif section.type == 'cards' %}
+                    {% include 'sections/cards.html' %}
+                {% endif %}
+            {% endwith %}
         {% endif %}
     {% endfor %}
 {% endblock %}

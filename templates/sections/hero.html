@@ -1,0 +1,9 @@
+<section class="section-hero">
+    <h1>{{ data.heading }}</h1>
+    {% if data.subheading %}
+        <p>{{ data.subheading }}</p>
+    {% endif %}
+    {% if data.button_text and data.button_url %}
+        <a href="{{ data.button_url }}">{{ data.button_text }}</a>
+    {% endif %}
+</section>
