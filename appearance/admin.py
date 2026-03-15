@@ -67,11 +67,18 @@ class FontAdmin(ModelAdmin):
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(ModelAdmin):
     list_display = ['site_name', 'active_theme', 'active_font', 'home_slug']
+    fieldsets = [
+        (None, {
+            'fields': ['site_name', 'active_theme', 'active_font', 'home_slug'],
+        }),
+        ('Контактные данные', {
+            'fields': ['contact_address', 'contact_phone',
+                       'contact_email', 'contact_hours', 'contact_map_url'],
+        }),
+    ]
 
     def has_add_permission(self, request):
-        # Запрет создания второй записи настроек
         return not SiteSettings.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
-        # Запрет удаления единственной записи настроек
         return False

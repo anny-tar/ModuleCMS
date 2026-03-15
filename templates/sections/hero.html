@@ -1,5 +1,5 @@
 {% load media_tags %}
-<section class="section-hero">
+<section class="section-hero" id="{{ section.pk }}">
     {% if data.image_id %}
         {% get_media data.image_id as hero_image %}
         {% if hero_image %}

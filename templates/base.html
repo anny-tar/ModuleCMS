@@ -55,10 +55,40 @@
 </head>
 <body>
     <nav>
-        {% for nav_page in nav_pages %}
-            <a href="{{ nav_page.get_absolute_url }}">{{ nav_page.title }}</a>
-        {% endfor %}
+        <ul style="list-style:none; display:flex; gap:1.5rem; flex-wrap:wrap;">
+            {% for item in nav_items %}
+                <li style="position:relative;">
+                    <a href="{{ item.url }}">{{ item.title }}</a>
+                    {% if item.anchors %}
+                        <ul style="display:none; position:absolute; top:100%; left:0;
+                                    background:var(--color-surface); padding:0.5rem 0;
+                                    min-width:200px; box-shadow:0 4px 12px rgba(0,0,0,0.1);
+                                    list-style:none; z-index:100;">
+                            {% for anchor in item.anchors %}
+                                <li>
+                                    <a href="{{ anchor.url }}"
+                                    style="display:block; padding:0.4rem 1rem;
+                                            text-decoration:none; font-weight:400;">
+                                        {{ anchor.title }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
     </nav>
+
+    <script>
+        // Показ/скрытие дочернего меню при наведении
+        document.querySelectorAll('nav > ul > li').forEach(li => {
+            const sub = li.querySelector('ul');
+            if (!sub) return;
+            li.addEventListener('mouseenter', () => sub.style.display = 'block');
+            li.addEventListener('mouseleave', () => sub.style.display = 'none');
+        });
+    </script>
 
     <main>
         {% block content %}{% endblock %}

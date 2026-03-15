@@ -1,47 +1,20 @@
 {% extends 'base.html' %}
-
-{% block title %}{{ page.seo_title|default:page.title }}{% endblock %}
-
 {% block content %}
-    <h1>{{ page.title }}</h1>
-
-    {% for section in sections %}
-        {% if section.is_visible %}
-            {% with data=section.data %}
-                <div class="contacts-block">
-                    {% if data.address %}
-                        <div class="contact-address">
-                            <h3>Адрес</h3>
-                            <p>{{ data.address }}</p>
-                        </div>
-                    {% endif %}
-                    {% if data.phones %}
-                        <div class="contact-phones">
-                            <h3>Телефоны</h3>
-                            {% for phone in data.phones %}
-                                <p><a href="tel:{{ phone }}">{{ phone }}</a></p>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    {% if data.email %}
-                        <div class="contact-email">
-                            <h3>Email</h3>
-                            <p><a href="mailto:{{ data.email }}">{{ data.email }}</a></p>
-                        </div>
-                    {% endif %}
-                    {% if data.schedule %}
-                        <div class="contact-schedule">
-                            <h3>Режим работы</h3>
-                            <p>{{ data.schedule }}</p>
-                        </div>
-                    {% endif %}
-                    {% if data.map_embed %}
-                        <div class="contact-map">
-                            {{ data.map_embed|safe }}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endwith %}
-        {% endif %}
-    {% endfor %}
+<h1>{{ page.title }}</h1>
+{% if settings.contact_address %}
+    <p><strong>Адрес:</strong> {{ settings.contact_address }}</p>
+{% endif %}
+{% if settings.contact_phone %}
+    <p><strong>Телефон:</strong> {{ settings.contact_phone }}</p>
+{% endif %}
+{% if settings.contact_email %}
+    <p><strong>Email:</strong> {{ settings.contact_email }}</p>
+{% endif %}
+{% if settings.contact_hours %}
+    <p><strong>Режим работы:</strong> {{ settings.contact_hours }}</p>
+{% endif %}
+{% if settings.contact_map_url %}
+    <iframe src="{{ settings.contact_map_url }}" width="100%" height="400"
+            style="border:0;" allowfullscreen loading="lazy"></iframe>
+{% endif %}
 {% endblock %}

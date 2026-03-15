@@ -39,15 +39,19 @@ class Font(models.Model):
 
 
 class SiteSettings(models.Model):
-    site_name    = models.CharField('Название сайта', max_length=200,
-                                    default='Мой сайт')
+    site_name    = models.CharField('Название сайта', max_length=200, default='Мой сайт')
     active_theme = models.ForeignKey(Theme, on_delete=models.SET_NULL,
-                                     null=True, blank=True,
-                                     verbose_name='Активная тема')
+                                     null=True, blank=True, verbose_name='Активная тема')
     active_font  = models.ForeignKey(Font, on_delete=models.SET_NULL,
-                                     null=True, blank=True,
-                                     verbose_name='Активный шрифт')
+                                     null=True, blank=True, verbose_name='Активный шрифт')
     home_slug    = models.SlugField('Slug главной страницы', default='glavnaya')
+
+    # Контактные данные
+    contact_address = models.TextField('Адрес', blank=True)
+    contact_phone   = models.CharField('Телефон', max_length=100, blank=True)
+    contact_email   = models.EmailField('Email', blank=True)
+    contact_hours   = models.CharField('Режим работы', max_length=200, blank=True)
+    contact_map_url = models.URLField('Ссылка на карту (embed)', max_length=500, blank=True)
 
     class Meta:
         verbose_name        = 'Настройки сайта'
@@ -58,6 +62,5 @@ class SiteSettings(models.Model):
 
     @classmethod
     def get(cls):
-        # Возвращает единственную запись настроек или создаёт её
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj

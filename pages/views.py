@@ -20,6 +20,8 @@ def page_detail(request, slug):
     # Дополнительный контекст для типизированных страниц
     if page.page_type == 'news_list':
         context = _news_context(request, context)
+    elif page.page_type == 'contacts':
+        context = _contacts_context(context)    
     elif page.page_type == 'gallery':
         context = _gallery_context(context)
 
@@ -41,4 +43,9 @@ def _gallery_context(context):
     from gallery.models import Album
     albums = Album.objects.filter(is_published=True)
     context.update({'albums': albums})
+    return context
+
+def _contacts_context(context):
+    from appearance.models import SiteSettings
+    context.update({'settings': SiteSettings.get()})
     return context

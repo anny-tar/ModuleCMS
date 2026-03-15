@@ -3,16 +3,20 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
-from appearance.models import SiteSettings
 
 
-def get_home_url():
-    return f'/{SiteSettings.get().home_slug}/'
+class HomeRedirectView(RedirectView):
+    permanent = False
+
+    def get_redirect_url(self, *args, **kwargs):
+        # Импорт и вызов только в момент запроса, не при старте
+        from appearance.models import SiteSettings
+        return f'/{SiteSettings.get().home_slug}/'
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', RedirectView.as_view(url=get_home_url(), permanent=False)),
+    path('', HomeRedirectView.as_view()),
     path('', include('news.urls')),
     path('', include('gallery.urls')),
     path('', include('leads.urls')),

@@ -36,15 +36,15 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
-    'unfold', # тема Admin
-    'unfold.contrib.filters', # расширенные фильтры
+    'unfold',                  # тема Admin
+    'unfold.contrib.filters',  # расширенные фильтры
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'adminsortable2', # drag-and-drop сортировка
+    'adminsortable2',          # drag-and-drop сортировка
     # Приложения проекта
     'pages',
     'navigation',
@@ -126,7 +126,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru-ru'
 
 TIME_ZONE = 'UTC'
 
@@ -157,7 +157,7 @@ UNFOLD = {
     "SHOW_VIEW_ON_SITE": True,
     "SIDEBAR": {
         "show_search": True,
-        "show_all_applications": True,
+        "show_all_applications": False,
         "navigation": [
             {
                 "title": _("Сайт"),
@@ -166,11 +166,13 @@ UNFOLD = {
                         "title": _("Страницы"),
                         "icon": "article",
                         "link": "/admin/pages/page/",
+                        "permission": lambda request: request.user.has_perm("pages.view_page"),
                     },
                     {
                         "title": _("Навигация"),
                         "icon": "menu",
                         "link": "/admin/navigation/menuitem/",
+                        "permission": lambda request: request.user.is_superuser,
                     },
                 ],
             },
@@ -180,17 +182,20 @@ UNFOLD = {
                     {
                         "title": _("Новости"),
                         "icon": "newspaper",
-                        "link": "/admin/news/newspost/",
+                        "link": "/admin/news/article/",
+                        "permission": lambda request: request.user.has_perm("news.view_article"),
                     },
                     {
                         "title": _("Галерея"),
                         "icon": "photo_library",
-                        "link": "/admin/gallery/galleryitem/",
+                        "link": "/admin/gallery/album/",
+                        "permission": lambda request: request.user.has_perm("gallery.view_album"),
                     },
                     {
                         "title": _("Медиафайлы"),
                         "icon": "perm_media",
                         "link": "/admin/media_library/mediafile/",
+                        "permission": lambda request: request.user.has_perm("media_library.view_mediafile"),
                     },
                 ],
             },
@@ -201,6 +206,7 @@ UNFOLD = {
                         "title": _("Заявки"),
                         "icon": "inbox",
                         "link": "/admin/leads/leadsubmission/",
+                        "permission": lambda request: request.user.has_perm("leads.view_leadsubmission"),
                     },
                 ],
             },
@@ -211,11 +217,13 @@ UNFOLD = {
                         "title": _("Оформление"),
                         "icon": "palette",
                         "link": "/admin/appearance/sitetheme/",
+                        "permission": lambda request: request.user.is_superuser,
                     },
                     {
                         "title": _("Пользователи"),
                         "icon": "people",
                         "link": "/admin/auth/user/",
+                        "permission": lambda request: request.user.is_superuser,
                     },
                 ],
             },
