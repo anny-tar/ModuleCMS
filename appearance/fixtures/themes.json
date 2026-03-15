@@ -1,0 +1,80 @@
+[
+  {
+    "model": "appearance.theme",
+    "pk": 1,
+    "fields": {
+      "name": "Синяя (по умолчанию)",
+      "is_custom": false,
+      "primary": "#2563eb",
+      "background": "#ffffff",
+      "surface": "#f8fafc",
+      "accent": "#1d4ed8",
+      "text": "#1e293b"
+    }
+  },
+  {
+    "model": "appearance.theme",
+    "pk": 2,
+    "fields": {
+      "name": "Тёмная",
+      "is_custom": false,
+      "primary": "#6366f1",
+      "background": "#0f172a",
+      "surface": "#1e293b",
+      "accent": "#818cf8",
+      "text": "#f1f5f9"
+    }
+  },
+  {
+    "model": "appearance.theme",
+    "pk": 3,
+    "fields": {
+      "name": "Зелёная",
+      "is_custom": false,
+      "primary": "#16a34a",
+      "background": "#ffffff",
+      "surface": "#f0fdf4",
+      "accent": "#15803d",
+      "text": "#14532d"
+    }
+  },
+  {
+    "model": "appearance.theme",
+    "pk": 4,
+    "fields": {
+      "name": "Красная",
+      "is_custom": false,
+      "primary": "#dc2626",
+      "background": "#ffffff",
+      "surface": "#fef2f2",
+      "accent": "#b91c1c",
+      "text": "#1e293b"
+    }
+  },
+  {
+    "model": "appearance.theme",
+    "pk": 5,
+    "fields": {
+      "name": "Фиолетовая",
+      "is_custom": false,
+      "primary": "#7c3aed",
+      "background": "#ffffff",
+      "surface": "#faf5ff",
+      "accent": "#6d28d9",
+      "text": "#1e293b"
+    }
+  },
+  {
+    "model": "appearance.theme",
+    "pk": 6,
+    "fields": {
+      "name": "Тёплая",
+      "is_custom": false,
+      "primary": "#d97706",
+      "background": "#fffbeb",
+      "surface": "#fef3c7",
+      "accent": "#b45309",
+      "text": "#1e293b"
+    }
+  }
+]

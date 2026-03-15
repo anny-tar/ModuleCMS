@@ -1,0 +1,68 @@
+[
+  {
+    "model": "appearance.font",
+    "pk": 1,
+    "fields": {
+      "name": "Inter",
+      "is_custom": false,
+      "google_font_name": "Inter",
+      "fallback": "sans-serif",
+      "custom_file": null
+    }
+  },
+  {
+    "model": "appearance.font",
+    "pk": 2,
+    "fields": {
+      "name": "Roboto",
+      "is_custom": false,
+      "google_font_name": "Roboto",
+      "fallback": "sans-serif",
+      "custom_file": null
+    }
+  },
+  {
+    "model": "appearance.font",
+    "pk": 3,
+    "fields": {
+      "name": "Montserrat",
+      "is_custom": false,
+      "google_font_name": "Montserrat",
+      "fallback": "sans-serif",
+      "custom_file": null
+    }
+  },
+  {
+    "model": "appearance.font",
+    "pk": 4,
+    "fields": {
+      "name": "Playfair Display",
+      "is_custom": false,
+      "google_font_name": "Playfair+Display",
+      "fallback": "serif",
+      "custom_file": null
+    }
+  },
+  {
+    "model": "appearance.font",
+    "pk": 5,
+    "fields": {
+      "name": "Nunito",
+      "is_custom": false,
+      "google_font_name": "Nunito",
+      "fallback": "sans-serif",
+      "custom_file": null
+    }
+  },
+  {
+    "model": "appearance.font",
+    "pk": 6,
+    "fields": {
+      "name": "Merriweather",
+      "is_custom": false,
+      "google_font_name": "Merriweather",
+      "fallback": "serif",
+      "custom_file": null
+    }
+  }
+]

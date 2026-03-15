@@ -3,9 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Сайт{% endblock %}</title>
+    <title>{% block title %}{{ site_settings.site_name }}{% endblock %}</title>
+
+    {% with font=site_settings.active_font %}
+        {% if font and not font.is_custom %}
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link href="https://fonts.googleapis.com/css2?family={{ font.google_font_name }}:wght@400;600;700&display=swap"
+                  rel="stylesheet">
+        {% endif %}
+        {% if font and font.is_custom and font.custom_file %}
+            <style>
+                @font-face {
+                    font-family: '{{ font.name }}';
+                    src: url('{{ font.custom_file.url }}') format('woff2');
+                }
+            </style>
+        {% endif %}
+    {% endwith %}
+
+    {% with theme=site_settings.active_theme %}
+        {% if theme %}
+            <style>
+                :root {
+                    --color-primary:    {{ theme.primary }};
+                    --color-background: {{ theme.background }};
+                    --color-surface:    {{ theme.surface }};
+                    --color-accent:     {{ theme.accent }};
+                    --color-text:       {{ theme.text }};
+                    {% with font=site_settings.active_font %}
+                        {% if font %}
+                            --font-main: '{{ font.name }}', {{ font.fallback }};
+                        {% endif %}
+                    {% endwith %}
+                }
+            </style>
+        {% endif %}
+    {% endwith %}
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font-main, sans-serif);
+            background: var(--color-background, #ffffff);
+            color: var(--color-text, #1e293b);
+        }
+        a { color: var(--color-primary, #2563eb); }
+        nav { background: var(--color-surface, #f8fafc); padding: 1rem 2rem; }
+        nav a { margin-right: 1.5rem; text-decoration: none; font-weight: 600; }
+        main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    </style>
 </head>
-<body>  
+<body>
     <nav>
         {% for nav_page in nav_pages %}
             <a href="{{ nav_page.get_absolute_url }}">{{ nav_page.title }}</a>
@@ -16,9 +64,8 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer>
-        <p>ModuleCMS</p>
+    <footer style="text-align:center; padding:2rem; background:var(--color-surface);">
+        <p>{{ site_settings.site_name }}</p>
     </footer>
-
 </body>
 </html>
