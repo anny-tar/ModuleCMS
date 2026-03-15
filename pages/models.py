@@ -1,3 +1,73 @@
 from django.db import models
+from django.utils.text import slugify
 
-# Create your models here.
+
+# Допустимые типы страниц
+class PageType(models.TextChoices):
+    DEFAULT  = 'default',   'Обычная страница'
+    CONTACTS = 'contacts',  'Контакты'
+    NEWS     = 'news_list', 'Новости'
+    GALLERY  = 'gallery',   'Галерея'
+
+
+class Page(models.Model):
+    title        = models.CharField('Заголовок', max_length=200)
+    slug         = models.SlugField('URL-адрес', max_length=200, unique=True, blank=True)
+    page_type    = models.CharField('Тип страницы', max_length=20,
+                                    choices=PageType.choices, default=PageType.DEFAULT)
+    is_published = models.BooleanField('Опубликована', default=False)
+    seo_title    = models.CharField('SEO заголовок', max_length=200, blank=True)
+    seo_desc     = models.TextField('SEO описание', blank=True)
+    order        = models.PositiveIntegerField('Порядок в меню', default=0)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Страница'
+        verbose_name_plural = 'Страницы'
+        ordering            = ['order', 'title']
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        # Автоматическая генерация slug из заголовка при первом сохранении
+        if not self.slug:
+            self.slug = slugify(self.title, allow_unicode=True)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return f'/{self.slug}/'
+    
+class Section(models.Model):
+    # Все допустимые типы секций
+    class SectionType(models.TextChoices):
+        HERO         = 'hero',         'Обложка (Hero)'
+        TEXT         = 'text',         'Текстовый блок'
+        COUNTERS     = 'counters',     'Счётчики / Достижения'
+        CARDS        = 'cards',        'Карточки с преимуществами'
+        TEAM         = 'team',         'Команда'
+        STEPS        = 'steps',        'Этапы / Нумерованный список'
+        TABLE        = 'table',        'Таблица'
+        CHART_PIE    = 'chart_pie',    'Круговая диаграмма'
+        FORM         = 'form',         'Форма обратной связи'
+        FAQ          = 'faq',          'Вопросы и ответы'
+        TESTIMONIALS = 'testimonials', 'Отзывы'
+
+    page       = models.ForeignKey(Page, on_delete=models.CASCADE,
+                                   related_name='sections', verbose_name='Страница')
+    type       = models.CharField('Тип секции', max_length=20,
+                                  choices=SectionType.choices)
+    title      = models.CharField('Заголовок секции', max_length=200, blank=True)
+    order      = models.PositiveIntegerField('Порядок', default=0)
+    is_visible = models.BooleanField('Видима', default=True)
+    # Все данные секции хранятся в JSON — структура зависит от типа
+    data       = models.JSONField('Данные', default=dict, blank=True)
+
+    class Meta:
+        verbose_name        = 'Секция'
+        verbose_name_plural = 'Секции'
+        ordering            = ['order']
+
+    def __str__(self):
+        return f'{self.get_type_display()} — {self.page.title}'

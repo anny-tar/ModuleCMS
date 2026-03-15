@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page.seo_title|default:page.title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ page.title }}</h1>
+
+    {% for section in sections %}
+        {% if section.is_visible %}
+            <section id="section-{{ section.id }}">
+                <p>Тип: {{ section.get_type_display }}</p>
+            </section>
+        {% endif %}
+    {% endfor %}
+{% endblock %}

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Сайт{% endblock %}</title>
+</head>
+<body>  
+    <nav>
+        {% for nav_page in nav_pages %}
+            <a href="{{ nav_page.get_absolute_url }}">{{ nav_page.title }}</a>
+        {% endfor %}
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>ModuleCMS</p>
+    </footer>
+
+</body>
+</html>
