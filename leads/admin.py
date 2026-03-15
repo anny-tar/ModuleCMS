@@ -1,9 +1,10 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import LeadSubmission
 
 
 @admin.register(LeadSubmission)
-class LeadSubmissionAdmin(admin.ModelAdmin):
+class LeadSubmissionAdmin(ModelAdmin):
     list_display  = ['__str__', 'section_id', 'data_preview',
                      'is_viewed', 'created_at']
     list_editable = ['is_viewed']

@@ -1,10 +1,12 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin
+
 from .models import MediaFile
 
 
 @admin.register(MediaFile)
-class MediaFileAdmin(admin.ModelAdmin):
+class MediaFileAdmin(ModelAdmin):
     list_display  = ['preview', 'original_name', 'media_type',
                      'file_size_display', 'uploaded_by', 'uploaded_at']
     list_filter   = ['media_type', 'uploaded_at']

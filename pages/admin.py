@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django import forms as django_forms
+from unfold.admin import ModelAdmin
 from .models import Page, Section
 from .forms import (HeroSectionForm, TextSectionForm,
                     CountersSectionForm, CardsSectionForm,
@@ -30,7 +30,7 @@ class SectionInline(admin.StackedInline):
 
 
 @admin.register(Page)
-class PageAdmin(admin.ModelAdmin):
+class PageAdmin(ModelAdmin):
     list_display        = ['title', 'slug', 'page_type', 'is_published', 'order']
     list_editable       = ['is_published', 'order']
     prepopulated_fields = {'slug': ('title',)}
@@ -38,7 +38,7 @@ class PageAdmin(admin.ModelAdmin):
 
 
 @admin.register(Section)
-class SectionAdmin(admin.ModelAdmin):
+class SectionAdmin(ModelAdmin):
     list_display  = ['__str__', 'type', 'order', 'is_visible']
     list_filter   = ['type', 'page']
     list_editable = ['order', 'is_visible']

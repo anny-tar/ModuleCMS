@@ -1,19 +1,20 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import Theme, Font, SiteSettings
 
 
 @admin.register(Theme)
-class ThemeAdmin(admin.ModelAdmin):
+class ThemeAdmin(ModelAdmin):
     list_display = ['name', 'primary', 'background', 'surface', 'accent', 'text', 'is_custom']
 
 
 @admin.register(Font)
-class FontAdmin(admin.ModelAdmin):
+class FontAdmin(ModelAdmin):
     list_display = ['name', 'google_font_name', 'fallback', 'is_custom']
 
 
 @admin.register(SiteSettings)
-class SiteSettingsAdmin(admin.ModelAdmin):
+class SiteSettingsAdmin(ModelAdmin):
     list_display = ['site_name', 'active_theme', 'active_font', 'home_slug']
 
     def has_add_permission(self, request):

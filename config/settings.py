@@ -36,6 +36,8 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
+    'unfold', # тема Admin
+    'unfold.contrib.filters', # расширенные фильтры
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -141,3 +143,81 @@ STATIC_URL = 'static/'
 # Папка для загружаемых файлов
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media_files'
+
+
+from django.utils.translation import gettext_lazy as _
+
+UNFOLD = {
+    "SITE_TITLE": "ModuleCMS",
+    "SITE_HEADER": "ModuleCMS",
+    "SITE_SUBHEADER": "Панель управления",
+    "SITE_URL": "/",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": _("Сайт"),
+                "items": [
+                    {
+                        "title": _("Страницы"),
+                        "icon": "article",
+                        "link": "/admin/pages/page/",
+                    },
+                    {
+                        "title": _("Навигация"),
+                        "icon": "menu",
+                        "link": "/admin/navigation/menuitem/",
+                    },
+                ],
+            },
+            {
+                "title": _("Контент"),
+                "items": [
+                    {
+                        "title": _("Новости"),
+                        "icon": "newspaper",
+                        "link": "/admin/news/newspost/",
+                    },
+                    {
+                        "title": _("Галерея"),
+                        "icon": "photo_library",
+                        "link": "/admin/gallery/galleryitem/",
+                    },
+                    {
+                        "title": _("Медиафайлы"),
+                        "icon": "perm_media",
+                        "link": "/admin/media_library/mediafile/",
+                    },
+                ],
+            },
+            {
+                "title": _("Продажи"),
+                "items": [
+                    {
+                        "title": _("Заявки"),
+                        "icon": "inbox",
+                        "link": "/admin/leads/leadsubmission/",
+                    },
+                ],
+            },
+            {
+                "title": _("Настройки"),
+                "items": [
+                    {
+                        "title": _("Оформление"),
+                        "icon": "palette",
+                        "link": "/admin/appearance/sitetheme/",
+                    },
+                    {
+                        "title": _("Пользователи"),
+                        "icon": "people",
+                        "link": "/admin/auth/user/",
+                    },
+                ],
+            },
+        ],
+    },
+}

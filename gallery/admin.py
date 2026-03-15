@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from .models import Album, Photo
 
 
@@ -9,14 +10,14 @@ class PhotoInline(admin.TabularInline):
 
 
 @admin.register(Album)
-class AlbumAdmin(admin.ModelAdmin):
+class AlbumAdmin(ModelAdmin):
     list_display  = ['title', 'is_published', 'order']
     list_editable = ['is_published', 'order']
     inlines       = [PhotoInline]
 
 
 @admin.register(Photo)
-class PhotoAdmin(admin.ModelAdmin):
+class PhotoAdmin(ModelAdmin):
     list_display  = ['__str__', 'album', 'order']
     list_filter   = ['album']
     list_editable = ['order']
