@@ -205,3 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Загруженные медиафайлы
+media_files/
+
+# Виртуальное окружение
+venv/
+
+# Переменные окружения
+.env
+
+# Кэш Python
+__pycache__/
+*.pyc
+*.pyo
+
+# База данных SQLite (если появится при тестах)
+*.sqlite3
