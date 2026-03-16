@@ -4,12 +4,9 @@ from .models import Section
 
 class HeroSectionForm(forms.Form):
     heading     = forms.CharField(label='Заголовок', max_length=200)
-    subheading  = forms.CharField(label='Подзаголовок', max_length=300,
-                                  required=False)
-    button_text = forms.CharField(label='Текст кнопки', max_length=100,
-                                  required=False)
-    button_url  = forms.CharField(label='Ссылка кнопки', max_length=200,
-                                  required=False)
+    subheading  = forms.CharField(label='Подзаголовок', max_length=300, required=False)
+    button_text = forms.CharField(label='Текст кнопки', max_length=100, required=False)
+    button_url  = forms.CharField(label='Ссылка кнопки', max_length=200, required=False)
 
     def to_data(self):
         d = self.cleaned_data
@@ -50,7 +47,7 @@ class CountersSectionForm(forms.Form):
 
     def to_data(self):
         items = []
-        for line in self.cleaned_data['items_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             if '|' in line:
                 value, label = line.split('|', 1)
                 items.append({'value': value.strip(), 'label': label.strip()})
@@ -73,7 +70,7 @@ class CardsSectionForm(forms.Form):
 
     def to_data(self):
         items = []
-        for line in self.cleaned_data['items_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             parts = line.split('|', 2)
             if len(parts) == 3:
                 items.append({
@@ -101,7 +98,7 @@ class TeamSectionForm(forms.Form):
 
     def to_data(self):
         items = []
-        for line in self.cleaned_data['items_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             parts = line.split('|', 2)
             if len(parts) >= 2:
                 items.append({
@@ -129,9 +126,9 @@ class StepsSectionForm(forms.Form):
 
     def to_data(self):
         items = []
-        for line in self.cleaned_data['items_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             parts = line.split('|', 1)
-            if parts:
+            if parts and parts[0].strip():
                 items.append({
                     'title':       parts[0].strip(),
                     'description': parts[1].strip() if len(parts) == 2 else '',
@@ -159,10 +156,15 @@ class TableSectionForm(forms.Form):
     )
 
     def to_data(self):
-        headers = [h.strip() for h in self.cleaned_data['headers_raw'].split('|')]
+        headers = [
+            h.strip()
+            for h in self.cleaned_data.get('headers_raw', '').split('|')
+            if h.strip()
+        ]
         rows = []
-        for line in self.cleaned_data['rows_raw'].strip().splitlines():
-            rows.append([cell.strip() for cell in line.split('|')])
+        for line in self.cleaned_data.get('rows_raw', '').strip().splitlines():
+            if line.strip():
+                rows.append([cell.strip() for cell in line.split('|')])
         return {'headers': headers, 'rows': rows}
 
     @staticmethod
@@ -183,7 +185,7 @@ class ChartPieSectionForm(forms.Form):
 
     def to_data(self):
         items = []
-        for line in self.cleaned_data['items_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             if '|' in line:
                 label, value = line.split('|', 1)
                 items.append({'label': label.strip(), 'value': value.strip()})
@@ -209,7 +211,7 @@ class FormSectionForm(forms.Form):
 
     def to_data(self):
         fields = []
-        for line in self.cleaned_data['fields_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('fields_raw', '').strip().splitlines():
             parts = line.split('|', 3)
             if len(parts) == 4:
                 fields.append({
@@ -239,7 +241,7 @@ class FaqSectionForm(forms.Form):
 
     def to_data(self):
         items = []
-        for line in self.cleaned_data['items_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             if '|' in line:
                 question, answer = line.split('|', 1)
                 items.append({'question': question.strip(), 'answer': answer.strip()})
@@ -262,7 +264,7 @@ class TestimonialsSectionForm(forms.Form):
 
     def to_data(self):
         items = []
-        for line in self.cleaned_data['items_raw'].strip().splitlines():
+        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             if '|' in line:
                 name, text = line.split('|', 1)
                 items.append({'name': name.strip(), 'text': text.strip()})
@@ -302,8 +304,7 @@ SECTION_FORM_MAP = {
 class SectionAdminForm(forms.ModelForm):
     """
     При инициализации добавляет поля типизированной формы и заполняет
-    их из obj.data через from_data(). При сохранении собирает данные
-    обратно в JSONField через to_data().
+    их из obj.data через from_data(). При сохранении собирает обратно в JSON.
     """
 
     class Meta:
@@ -315,7 +316,7 @@ class SectionAdminForm(forms.ModelForm):
         instance = kwargs.get('instance')
 
         if instance and instance.type in SECTION_FORM_MAP:
-            form_class = SECTION_FORM_MAP[instance.type]
+            form_class    = SECTION_FORM_MAP[instance.type]
             initial_typed = {}
             if instance.data and hasattr(form_class, 'from_data'):
                 initial_typed = form_class.from_data(instance.data)
@@ -328,15 +329,18 @@ class SectionAdminForm(forms.ModelForm):
     def save(self, commit=True):
         obj = super().save(commit=False)
         if obj.type in SECTION_FORM_MAP:
-            form_class   = SECTION_FORM_MAP[obj.type]
-            typed_data   = {
+            form_class = SECTION_FORM_MAP[obj.type]
+            typed_data = {
                 name: self.cleaned_data[name]
                 for name in form_class.base_fields
                 if name in self.cleaned_data
             }
-            typed_form = form_class(data=typed_data)
-            typed_form.is_valid()
-            obj.data = typed_form.to_data() if hasattr(typed_form, 'to_data') else typed_data
+            if typed_data:
+                typed_form = form_class(data=typed_data)
+                typed_form.is_valid()
+                obj.data = typed_form.to_data() if hasattr(typed_form, 'to_data') else typed_data
+            else:
+                obj.data = {}
         if commit:
             obj.save()
         return obj

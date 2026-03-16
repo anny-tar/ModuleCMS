@@ -1,6 +1,5 @@
 from django.db import models
-from django.utils.text import slugify
-
+from slugify import slugify
 
 # Допустимые типы страниц
 class PageType(models.TextChoices):
@@ -33,7 +32,7 @@ class Page(models.Model):
     def save(self, *args, **kwargs):
         # Автоматическая генерация slug из заголовка при первом сохранении
         if not self.slug:
-            self.slug = slugify(self.title, allow_unicode=True)
+            self.slug = slugify(self.title)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

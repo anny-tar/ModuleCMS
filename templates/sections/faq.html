@@ -1,13 +1,22 @@
-<section class="section-faq" id="{{ section.pk }}">
-    {% if section.title %}
-        <h2>{{ section.title }}</h2>
-    {% endif %}
-    <dl class="faq-list">
-        {% for item in data.items %}
-            <div class="faq-item">
-                <dt>{{ item.question }}</dt>
-                <dd>{{ item.answer }}</dd>
-            </div>
-        {% endfor %}
-    </dl>
+<section class="section section-faq" id="section-{{ section.pk }}">
+    <div class="container">
+        {% if section.title %}
+            <h2 class="section__title">{{ section.title }}</h2>
+        {% endif %}
+        <dl class="faq-list">
+            {% for item in data.items %}
+                <div class="faq-item">
+                    <dt>{{ item.question }}</dt>
+                    <dd>{{ item.answer }}</dd>
+                </div>
+            {% endfor %}
+        </dl>
+    </div>
+    <script>
+        document.querySelectorAll('#section-{{ section.pk }} .faq-item dt').forEach(dt => {
+            dt.addEventListener('click', () => {
+                dt.closest('.faq-item').classList.toggle('open');
+            });
+        });
+    </script>
 </section>

@@ -1,13 +1,15 @@
-<section class="section-counters" id="{{ section.pk }}">
-    {% if section.title %}
-        <h2>{{ section.title }}</h2>
-    {% endif %}
-    <div class="counters-grid">
-        {% for item in data.items %}
-            <div class="counter-item">
-                <span class="counter-value">{{ item.value }}</span>
-                <span class="counter-label">{{ item.label }}</span>
-            </div>
-        {% endfor %}
+<section class="section section--alt section-counters" id="section-{{ section.pk }}">
+    <div class="container">
+        {% if section.title %}
+            <h2 class="section__title">{{ section.title }}</h2>
+        {% endif %}
+        <div class="counters-grid">
+            {% for item in data.items %}
+                <div class="counter-item">
+                    <span class="counter-value">{{ item.value }}</span>
+                    <span class="counter-label">{{ item.label }}</span>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 </section>

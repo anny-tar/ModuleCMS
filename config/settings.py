@@ -140,6 +140,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
 
 # Папка для загружаемых файлов
 MEDIA_URL  = '/media/'
@@ -160,47 +162,47 @@ UNFOLD = {
         "show_all_applications": False,
         "navigation": [
             {
-                "title": _("Сайт"),
+                "title": _("Оформление"),
                 "items": [
                     {
-                        "title": _("Страницы"),
-                        "icon": "article",
-                        "link": "/admin/pages/page/",
-                        "permission": lambda request: request.user.has_perm("pages.view_page"),
+                        "title": _("Настройки сайта"),
+                        "icon": "settings",
+                        "link": "/admin/appearance/sitesettings/",
+                        "permission": lambda request: request.user.is_superuser,
                     },
                     {
-                        "title": _("Навигация"),
-                        "icon": "menu",
-                        "link": "/admin/navigation/menuitem/",
+                        "title": _("Темы оформления"),
+                        "icon": "palette",
+                        "link": "/admin/appearance/theme/",
+                        "permission": lambda request: request.user.is_superuser,
+                    },
+                    {
+                        "title": _("Шрифты"),
+                        "icon": "font_download",
+                        "link": "/admin/appearance/font/",
                         "permission": lambda request: request.user.is_superuser,
                     },
                 ],
             },
             {
-                "title": _("Контент"),
+                "title": _("Галерея"),
                 "items": [
                     {
-                        "title": _("Новости"),
-                        "icon": "newspaper",
-                        "link": "/admin/news/article/",
-                        "permission": lambda request: request.user.has_perm("news.view_article"),
-                    },
-                    {
-                        "title": _("Галерея"),
+                        "title": _("Альбомы"),
                         "icon": "photo_library",
                         "link": "/admin/gallery/album/",
                         "permission": lambda request: request.user.has_perm("gallery.view_album"),
                     },
                     {
-                        "title": _("Медиафайлы"),
-                        "icon": "perm_media",
-                        "link": "/admin/media_library/mediafile/",
-                        "permission": lambda request: request.user.has_perm("media_library.view_mediafile"),
+                        "title": _("Фотографии"),
+                        "icon": "photo",
+                        "link": "/admin/gallery/photo/",
+                        "permission": lambda request: request.user.has_perm("gallery.view_photo"),
                     },
                 ],
             },
             {
-                "title": _("Продажи"),
+                "title": _("Заявки"),
                 "items": [
                     {
                         "title": _("Заявки"),
@@ -211,12 +213,57 @@ UNFOLD = {
                 ],
             },
             {
-                "title": _("Настройки"),
+                "title": _("Медиабиблиотека"),
                 "items": [
                     {
-                        "title": _("Оформление"),
-                        "icon": "palette",
-                        "link": "/admin/appearance/sitetheme/",
+                        "title": _("Медиафайлы"),
+                        "icon": "perm_media",
+                        "link": "/admin/media_library/mediafile/",
+                        "permission": lambda request: request.user.has_perm("media_library.view_mediafile"),
+                    },
+                ],
+            },
+            {
+                "title": _("Новости"),
+                "items": [
+                    {
+                        "title": _("Категории новостей"),
+                        "icon": "label",
+                        "link": "/admin/news/category/",
+                        "permission": lambda request: request.user.has_perm("news.view_category"),
+                    },
+                    {
+                        "title": _("Статьи"),
+                        "icon": "newspaper",
+                        "link": "/admin/news/article/",
+                        "permission": lambda request: request.user.has_perm("news.view_article"),
+                    },
+                ],
+            },
+            {
+                "title": _("Страницы"),
+                "items": [
+                    {
+                        "title": _("Секции"),
+                        "icon": "view_agenda",
+                        "link": "/admin/pages/section/",
+                        "permission": lambda request: request.user.has_perm("pages.view_section"),
+                    },
+                    {
+                        "title": _("Страницы"),
+                        "icon": "article",
+                        "link": "/admin/pages/page/",
+                        "permission": lambda request: request.user.has_perm("pages.view_page"),
+                    },
+                ],
+            },
+            {
+                "title": _("Пользователи и группы"),
+                "items": [
+                    {
+                        "title": _("Группы"),
+                        "icon": "group",
+                        "link": "/admin/auth/group/",
                         "permission": lambda request: request.user.is_superuser,
                     },
                     {

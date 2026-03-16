@@ -9,9 +9,9 @@ class HomeRedirectView(RedirectView):
     permanent = False
 
     def get_redirect_url(self, *args, **kwargs):
-        # Импорт и вызов только в момент запроса, не при старте
-        from appearance.models import SiteSettings
-        return f'/{SiteSettings.get().home_slug}/'
+        from pages.models import Page
+        page = Page.objects.filter(is_published=True).order_by('order').first()
+        return f'/{page.slug}/' if page else '/admin/'
 
 
 urlpatterns = [

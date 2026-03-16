@@ -1,15 +1,12 @@
 from django import forms
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from unfold.admin import ModelAdmin
 from .models import Theme, Font, SiteSettings
 
 
 class ColorInput(forms.TextInput):
-    """
-    Виджет, совмещающий стандартный color picker браузера
-    с текстовым полем для ввода hex-кода вручную.
-    """
+    """Виджет color picker браузера для цветовых полей темы."""
     input_type = 'color'
 
     def __init__(self, attrs=None):
@@ -20,10 +17,10 @@ class ColorInput(forms.TextInput):
 
 
 class ThemeAdminForm(forms.ModelForm):
-    """Форма темы с color picker для каждого цветового поля."""
+    """Форма темы с color picker. Поле is_custom скрыто — управляется программно."""
     class Meta:
         model   = Theme
-        fields  = '__all__'
+        exclude = ['is_custom']
         widgets = {
             'primary':    ColorInput(),
             'background': ColorInput(),
@@ -38,38 +35,89 @@ class ThemeAdmin(ModelAdmin):
     form         = ThemeAdminForm
     list_display = ['name', 'color_swatches', 'is_custom']
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj and not obj.is_custom:
+            return ['name', 'primary', 'background', 'surface', 'accent', 'text']
+        return []
+
+    def has_change_permission(self, request, obj=None):
+        if obj and not obj.is_custom:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and not obj.is_custom:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def save_model(self, request, obj, form, change):
+        # Новые темы всегда пользовательские
+        if not change:
+            obj.is_custom = True
+        super().save_model(request, obj, form, change)
+
     @admin.display(description='Цвета')
     def color_swatches(self, obj):
-        """Отображает пять цветовых кружков темы в списке."""
-        swatches = ''.join(
-            format_html(
+        parts = []
+        for label, color in [
+            ('Primary',    obj.primary),
+            ('Background', obj.background),
+            ('Surface',    obj.surface),
+            ('Accent',     obj.accent),
+            ('Text',       obj.text),
+        ]:
+            parts.append(format_html(
                 '<span title="{}" style="display:inline-block;width:20px;height:20px;'
                 'border-radius:50%;background:{};margin-right:4px;'
                 'border:1px solid #e2e8f0;"></span>',
                 label, color,
-            )
-            for label, color in [
-                ('Primary',    obj.primary),
-                ('Background', obj.background),
-                ('Surface',    obj.surface),
-                ('Accent',     obj.accent),
-                ('Text',       obj.text),
-            ]
-        )
-        return format_html(swatches)
+            ))
+        return mark_safe(''.join(str(p) for p in parts))
+
+
+class FontAdminForm(forms.ModelForm):
+    """Форма шрифта. Поле is_custom скрыто — управляется программно."""
+    class Meta:
+        model   = Font
+        exclude = ['is_custom']
 
 
 @admin.register(Font)
 class FontAdmin(ModelAdmin):
+    form         = FontAdminForm
     list_display = ['name', 'google_font_name', 'fallback', 'is_custom']
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and not obj.is_custom:
+            return ['name', 'google_font_name', 'fallback', 'custom_file']
+        return []
+
+    def has_change_permission(self, request, obj=None):
+        if obj and not obj.is_custom:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and not obj.is_custom:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def save_model(self, request, obj, form, change):
+        # Новые шрифты всегда пользовательские
+        if not change:
+            obj.is_custom = True
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(ModelAdmin):
-    list_display = ['site_name', 'active_theme', 'active_font', 'home_slug']
+    list_display = ['site_name', 'active_theme', 'active_font', 'nav_mode']
     fieldsets = [
         (None, {
-            'fields': ['site_name', 'active_theme', 'active_font', 'home_slug'],
+            'fields': ['site_name', 'active_theme', 'active_font'],
+        }),
+        ('Логотип и навигация', {
+            'fields': ['logo', 'favicon', 'nav_mode'],
         }),
         ('Контактные данные', {
             'fields': ['contact_address', 'contact_phone',

@@ -1,25 +1,27 @@
-<section class="section-table" id="{{ section.pk }}">
-    {% if section.title %}
-        <h2>{{ section.title }}</h2>
-    {% endif %}
-    <table>
-        {% if data.headers %}
-            <thead>
-                <tr>
-                    {% for header in data.headers %}
-                        <th>{{ header }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
+<section class="section section--alt section-table" id="section-{{ section.pk }}">
+    <div class="container">
+        {% if section.title %}
+            <h2 class="section__title">{{ section.title }}</h2>
         {% endif %}
-        <tbody>
-            {% for row in data.rows %}
-                <tr>
-                    {% for cell in row %}
-                        <td>{{ cell }}</td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <table>
+            {% if data.headers %}
+                <thead>
+                    <tr>
+                        {% for header in data.headers %}
+                            <th>{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+            {% endif %}
+            <tbody>
+                {% for row in data.rows %}
+                    <tr>
+                        {% for cell in row %}
+                            <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </section>

@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
-
 class LeadsConfig(AppConfig):
-    name = 'leads'
+    name         = 'leads'
+    verbose_name = 'Заявки'

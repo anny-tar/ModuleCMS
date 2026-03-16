@@ -1,6 +1,8 @@
-<section class="section-text" id="{{ section.pk }}">
-    {% if section.title %}
-        <h2>{{ section.title }}</h2>
-    {% endif %}
-    <div>{{ data.content }}</div>
+<section class="section section-text" id="section-{{ section.pk }}">
+    <div class="container">
+        {% if section.title %}
+            <h2 class="section__title">{{ section.title }}</h2>
+        {% endif %}
+        <div class="section-text__body">{{ data.content|linebreaks }}</div>
+    </div>
 </section>

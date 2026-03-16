@@ -4,7 +4,6 @@ from django.db import models
 class Theme(models.Model):
     name       = models.CharField('Название', max_length=100)
     is_custom  = models.BooleanField('Пользовательская', default=False)
-    # Пять CSS-переменных темы
     primary    = models.CharField('Primary (кнопки, акценты)', max_length=7, default='#2563eb')
     background = models.CharField('Background (фон страницы)', max_length=7, default='#ffffff')
     surface    = models.CharField('Surface (фон карточек)',    max_length=7, default='#f8fafc')
@@ -39,12 +38,36 @@ class Font(models.Model):
 
 
 class SiteSettings(models.Model):
+
+    class NavMode(models.TextChoices):
+        LOGO_AND_NAME = 'logo_and_name', 'Логотип и название'
+        LOGO_ONLY     = 'logo_only',     'Только логотип'
+        NAME_ONLY     = 'name_only',     'Только название'
+        HIDDEN        = 'hidden',        'Скрыть'
+
     site_name    = models.CharField('Название сайта', max_length=200, default='Мой сайт')
     active_theme = models.ForeignKey(Theme, on_delete=models.SET_NULL,
                                      null=True, blank=True, verbose_name='Активная тема')
     active_font  = models.ForeignKey(Font, on_delete=models.SET_NULL,
                                      null=True, blank=True, verbose_name='Активный шрифт')
-    home_slug    = models.SlugField('Slug главной страницы', default='glavnaya')
+
+    # Логотип и фавикон через медиабиблиотеку
+    logo    = models.ForeignKey('media_library.MediaFile',
+                                on_delete=models.SET_NULL,
+                                null=True, blank=True,
+                                related_name='logo_settings',
+                                verbose_name='Логотип')
+    favicon = models.ForeignKey('media_library.MediaFile',
+                                on_delete=models.SET_NULL,
+                                null=True, blank=True,
+                                related_name='favicon_settings',
+                                verbose_name='Фавикон (.ico или .png)')
+
+    # Режим отображения логотипа/названия в навигации
+    nav_mode = models.CharField('Навигация: логотип и название',
+                                max_length=20,
+                                choices=NavMode.choices,
+                                default=NavMode.NAME_ONLY)
 
     # Контактные данные
     contact_address = models.TextField('Адрес', blank=True)

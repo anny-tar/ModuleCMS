@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
-
 class MediaLibraryConfig(AppConfig):
-    name = 'media_library'
+    name         = 'media_library'
+    verbose_name = 'Медиабиблиотека'

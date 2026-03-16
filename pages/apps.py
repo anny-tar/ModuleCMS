@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
-
 class PagesConfig(AppConfig):
-    name = 'pages'
+    name         = 'pages'
+    verbose_name = 'Страницы'
