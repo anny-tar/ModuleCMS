@@ -43,6 +43,7 @@ class CountersSectionForm(forms.Form):
         label='Счётчики',
         widget=forms.Textarea(attrs={'rows': 5}),
         help_text='Каждый с новой строки: значение|подпись\nПример: 150|Проектов',
+        required=False,
     )
 
     def to_data(self):
@@ -66,17 +67,18 @@ class CardsSectionForm(forms.Form):
         label='Карточки',
         widget=forms.Textarea(attrs={'rows': 6}),
         help_text='Каждая с новой строки: иконка|заголовок|текст\nПример: ★|Качество|Проверенные материалы',
+        required=False,
     )
 
     def to_data(self):
         items = []
         for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             parts = line.split('|', 2)
-            if len(parts) == 3:
+            if len(parts) >= 2:
                 items.append({
                     'icon':  parts[0].strip(),
                     'title': parts[1].strip(),
-                    'text':  parts[2].strip(),
+                    'text':  parts[2].strip() if len(parts) > 2 else '',
                 })
         return {'items': items}
 
@@ -94,17 +96,18 @@ class TeamSectionForm(forms.Form):
         label='Участники',
         widget=forms.Textarea(attrs={'rows': 6}),
         help_text='Каждый с новой строки: имя|должность|описание\nПример: Иван Петров|Директор|Основатель',
+        required=False,
     )
 
     def to_data(self):
         items = []
         for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
             parts = line.split('|', 2)
-            if len(parts) >= 2:
+            if parts and parts[0].strip():
                 items.append({
                     'name':        parts[0].strip(),
-                    'position':    parts[1].strip(),
-                    'description': parts[2].strip() if len(parts) == 3 else '',
+                    'position':    parts[1].strip() if len(parts) > 1 else '',
+                    'description': parts[2].strip() if len(parts) > 2 else '',
                 })
         return {'items': items}
 
@@ -122,6 +125,7 @@ class StepsSectionForm(forms.Form):
         label='Шаги',
         widget=forms.Textarea(attrs={'rows': 6}),
         help_text='Каждый с новой строки: заголовок|описание\nПример: Заявка|Вы оставляете заявку на сайте',
+        required=False,
     )
 
     def to_data(self):
@@ -131,7 +135,7 @@ class StepsSectionForm(forms.Form):
             if parts and parts[0].strip():
                 items.append({
                     'title':       parts[0].strip(),
-                    'description': parts[1].strip() if len(parts) == 2 else '',
+                    'description': parts[1].strip() if len(parts) > 1 else '',
                 })
         return {'items': items}
 
@@ -148,19 +152,17 @@ class TableSectionForm(forms.Form):
     headers_raw = forms.CharField(
         label='Заголовки столбцов (через |)',
         help_text='Пример: Услуга|Срок|Цена',
+        required=False,
     )
     rows_raw = forms.CharField(
         label='Строки таблицы',
         widget=forms.Textarea(attrs={'rows': 8}),
         help_text='Каждая строка с новой строки, ячейки через |\nПример: Фундамент|14 дней|150 000 ₽',
+        required=False,
     )
 
     def to_data(self):
-        headers = [
-            h.strip()
-            for h in self.cleaned_data.get('headers_raw', '').split('|')
-            if h.strip()
-        ]
+        headers = [h.strip() for h in self.cleaned_data.get('headers_raw', '').split('|') if h.strip()]
         rows = []
         for line in self.cleaned_data.get('rows_raw', '').strip().splitlines():
             if line.strip():
@@ -181,6 +183,7 @@ class ChartPieSectionForm(forms.Form):
         label='Данные диаграммы',
         widget=forms.Textarea(attrs={'rows': 5}),
         help_text='Каждый с новой строки: подпись|значение\nПример: Онлайн|45',
+        required=False,
     )
 
     def to_data(self):
@@ -207,6 +210,7 @@ class FormSectionForm(forms.Form):
         label='Поля формы',
         widget=forms.Textarea(attrs={'rows': 6}),
         help_text='Каждое поле с новой строки: имя|тип|подпись|обязательное\nПример: name|text|Ваше имя|true',
+        required=False,
     )
 
     def to_data(self):
@@ -226,8 +230,7 @@ class FormSectionForm(forms.Form):
     def from_data(data):
         fields = data.get('fields', [])
         return {'fields_raw': '\n'.join(
-            f"{f.get('name', '')}|{f.get('type', '')}|{f.get('label', '')}|"
-            f"{str(f.get('required', False)).lower()}"
+            f"{f.get('name', '')}|{f.get('type', '')}|{f.get('label', '')}|{str(f.get('required', False)).lower()}"
             for f in fields
         )}
 
@@ -237,6 +240,7 @@ class FaqSectionForm(forms.Form):
         label='Вопросы и ответы',
         widget=forms.Textarea(attrs={'rows': 6}),
         help_text='Каждый с новой строки: вопрос|ответ\nПример: Как оставить заявку?|Заполните форму на сайте',
+        required=False,
     )
 
     def to_data(self):
@@ -260,6 +264,7 @@ class TestimonialsSectionForm(forms.Form):
         label='Отзывы',
         widget=forms.Textarea(attrs={'rows': 5}),
         help_text='Каждый с новой строки: имя|текст\nПример: Анна К.|Отличная работа, всё в срок!',
+        required=False,
     )
 
     def to_data(self):
@@ -279,9 +284,6 @@ class TestimonialsSectionForm(forms.Form):
 
 
 # ---------------------------------------------------------------------------
-# Соответствие типа → класс формы
-# ---------------------------------------------------------------------------
-
 SECTION_FORM_MAP = {
     'hero':         HeroSectionForm,
     'text':         TextSectionForm,
@@ -298,33 +300,34 @@ SECTION_FORM_MAP = {
 
 
 # ---------------------------------------------------------------------------
-# Единая ModelForm для Section
-# ---------------------------------------------------------------------------
-
 class SectionAdminForm(forms.ModelForm):
-    """
-    При инициализации добавляет поля типизированной формы и заполняет
-    их из obj.data через from_data(). При сохранении собирает обратно в JSON.
-    """
 
     class Meta:
         model  = Section
         fields = ['page', 'type', 'title', 'is_visible']
 
     def __init__(self, *args, **kwargs):
+        import copy
         super().__init__(*args, **kwargs)
         instance = kwargs.get('instance')
 
-        if instance and instance.type in SECTION_FORM_MAP:
-            form_class    = SECTION_FORM_MAP[instance.type]
-            initial_typed = {}
-            if instance.data and hasattr(form_class, 'from_data'):
-                initial_typed = form_class.from_data(instance.data)
-            for name, field in form_class.base_fields.items():
-                import copy
-                self.fields[name] = copy.deepcopy(field)
-                if name in initial_typed:
-                    self.initial[name] = initial_typed[name]
+        post_data    = args[0] if args and hasattr(args[0], 'get') else None
+        current_type = (post_data.get('type') if post_data else None) or (instance.type if instance else None)
+
+        if not current_type or current_type not in SECTION_FORM_MAP:
+            return
+
+        form_class    = SECTION_FORM_MAP[current_type]
+        initial_typed = {}
+        if instance and instance.data and not post_data and hasattr(form_class, 'from_data'):
+            initial_typed = form_class.from_data(instance.data)
+
+        for name, field in form_class.base_fields.items():
+            f = copy.deepcopy(field)
+            f.required = False
+            self.fields[name] = f
+            if name in initial_typed:
+                self.initial[name] = initial_typed[name]
 
     def save(self, commit=True):
         obj = super().save(commit=False)
@@ -340,7 +343,7 @@ class SectionAdminForm(forms.ModelForm):
                 typed_form.is_valid()
                 obj.data = typed_form.to_data() if hasattr(typed_form, 'to_data') else typed_data
             else:
-                obj.data = {}
+                obj.data = obj.data or {}
         if commit:
             obj.save()
         return obj

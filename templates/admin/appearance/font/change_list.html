@@ -1,0 +1,55 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+{% include "admin/cms_list_styles.html" %}
+
+<div class="cms-toolbar">
+    <strong class="cms-toolbar__title">Шрифты</strong>
+</div>
+
+<table class="cms-table">
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Google Fonts</th>
+            <th>Запасной</th>
+            <th>Тип</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for font in cl.queryset %}
+        <tr class="cms-row">
+            <td class="cms-cell-title">
+                {% if font.is_custom %}
+                    <a href="{% url 'admin:appearance_font_change' font.pk %}">{{ font.name }}</a>
+                {% else %}
+                    {{ font.name }}
+                {% endif %}
+            </td>
+            <td style="font-size:0.82rem;color:#64748b;">{{ font.google_font_name|default:"—" }}</td>
+            <td style="font-size:0.82rem;color:#64748b;">{{ font.fallback }}</td>
+            <td>
+                {% if font.is_custom %}
+                    <span class="cms-badge cms-badge--blue">Пользовательский</span>
+                {% else %}
+                    <span class="cms-badge cms-badge--gray">Встроенный</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if font.is_custom %}
+                    <div class="cms-actions">
+                        <a href="{% url 'admin:appearance_font_change' font.pk %}" class="cms-action cms-action--edit">Редактировать</a>
+                        <a href="{% url 'admin:appearance_font_delete' font.pk %}" class="cms-action cms-action--delete">Удалить</a>
+                    </div>
+                {% else %}
+                    <span style="color:#cbd5e1;font-size:0.8rem;">—</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="cms-empty">Шрифтов пока нет.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

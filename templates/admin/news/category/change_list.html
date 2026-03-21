@@ -5,13 +5,11 @@
 
 <div class="cms-toolbar">
     <strong class="cms-toolbar__title">Категории новостей</strong>
-    <span id="category-saved" class="cms-saved-msg">✓ Порядок сохранён</span>
 </div>
 
-<table class="cms-table" id="category-table">
+<table class="cms-table">
     <thead>
         <tr>
-            <th style="width:32px;"></th>
             <th>Название</th>
             <th>URL</th>
             <th>Действия</th>
@@ -19,8 +17,7 @@
     </thead>
     <tbody>
         {% for category in cl.queryset %}
-        <tr class="cms-row" draggable="true" data-id="{{ category.pk }}">
-            <td class="cms-handle">⠿</td>
+        <tr class="cms-row" data-id="{{ category.pk }}">
             <td class="cms-cell-title">
                 <a href="{% url 'admin:news_category_change' category.pk %}">{{ category.name }}</a>
             </td>
@@ -33,62 +30,8 @@
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="4" class="cms-empty">Категорий пока нет.</td></tr>
+        <tr><td colspan="3" class="cms-empty">Категорий пока нет.</td></tr>
         {% endfor %}
     </tbody>
 </table>
-
-<script>
-(function () {
-    cmsDnD('category-table', 'category', '/admin/cms-sort/', 'category-saved');
-
-    function cmsDnD(tableId, model, url, savedId) {
-        var tbody = document.querySelector('#' + tableId + ' tbody');
-        if (!tbody) return;
-        var dragged = null;
-        tbody.addEventListener('dragstart', function (e) {
-            dragged = e.target.closest('.cms-row');
-            if (!dragged) return;
-            setTimeout(function () { dragged.classList.add('dragging'); }, 0);
-            e.dataTransfer.effectAllowed = 'move';
-        });
-        tbody.addEventListener('dragend', function () {
-            if (dragged) dragged.classList.remove('dragging');
-            tbody.querySelectorAll('.cms-row').forEach(function (el) { el.classList.remove('drag-over'); });
-            dragged = null;
-        });
-        tbody.addEventListener('dragover', function (e) {
-            e.preventDefault();
-            var target = e.target.closest('.cms-row');
-            if (!target || target === dragged) return;
-            tbody.querySelectorAll('.cms-row').forEach(function (el) { el.classList.remove('drag-over'); });
-            target.classList.add('drag-over');
-        });
-        tbody.addEventListener('dragleave', function (e) {
-            var target = e.target.closest('.cms-row'); if (target) target.classList.remove('drag-over');
-        });
-        tbody.addEventListener('drop', function (e) {
-            e.preventDefault();
-            var target = e.target.closest('.cms-row');
-            if (!target || target === dragged || !dragged) return;
-            target.classList.remove('drag-over');
-            var rect = target.getBoundingClientRect();
-            if (e.clientY < rect.top + rect.height / 2) tbody.insertBefore(dragged, target);
-            else tbody.insertBefore(dragged, target.nextSibling);
-            var ids = Array.from(tbody.querySelectorAll('.cms-row')).map(function (el) { return parseInt(el.dataset.id, 10); });
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ model: model, ids: ids }),
-            }).then(function (r) {
-                if (r.ok) { var el = document.getElementById(savedId); el.style.display = 'inline'; setTimeout(function () { el.style.display = 'none'; }, 2000); }
-            });
-        });
-    }
-    function getCookie(name) {
-        var v = '; ' + document.cookie, p = v.split('; ' + name + '=');
-        if (p.length === 2) return p.pop().split(';').shift(); return '';
-    }
-})();
-</script>
 {% endblock %}

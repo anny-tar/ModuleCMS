@@ -18,7 +18,7 @@ class MediaFile(models.Model):
     alt_text      = models.CharField('Alt-текст', max_length=255, blank=True)
     uploaded_by   = models.ForeignKey(User, on_delete=models.SET_NULL,
                                       null=True, verbose_name='Загрузил')
-    uploaded_at   = models.DateTimeField(auto_now_add=True)
+    uploaded_at   = models.DateTimeField('Дата загрузки', auto_now_add=True)
     file_size     = models.PositiveIntegerField('Размер (байт)', default=0)
 
     class Meta:

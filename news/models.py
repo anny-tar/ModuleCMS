@@ -5,12 +5,11 @@ from slugify import slugify
 class Category(models.Model):
     name  = models.CharField('Название', max_length=100)
     slug  = models.SlugField('URL', max_length=100, unique=True, blank=True)
-    order = models.PositiveIntegerField('Порядок', default=0)
 
     class Meta:
         verbose_name        = 'Категория'
         verbose_name_plural = 'Категории новостей'
-        ordering            = ['order', 'name']
+        ordering            = ['name']
 
     def __str__(self):
         return self.name

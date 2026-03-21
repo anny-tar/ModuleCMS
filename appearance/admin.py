@@ -33,7 +33,7 @@ class ThemeAdminForm(forms.ModelForm):
 @admin.register(Theme)
 class ThemeAdmin(ModelAdmin):
     form         = ThemeAdminForm
-    list_display = ['name', 'color_swatches', 'is_custom']
+    list_display = ['name', 'color_swatches']
 
     def get_readonly_fields(self, request, obj=None):
         if obj and not obj.is_custom:
@@ -51,7 +51,6 @@ class ThemeAdmin(ModelAdmin):
         return super().has_delete_permission(request, obj)
 
     def save_model(self, request, obj, form, change):
-        # Новые темы всегда пользовательские
         if not change:
             obj.is_custom = True
         super().save_model(request, obj, form, change)
@@ -85,7 +84,7 @@ class FontAdminForm(forms.ModelForm):
 @admin.register(Font)
 class FontAdmin(ModelAdmin):
     form         = FontAdminForm
-    list_display = ['name', 'google_font_name', 'fallback', 'is_custom']
+    list_display = ['name', 'google_font_name', 'fallback']
 
     def get_readonly_fields(self, request, obj=None):
         if obj and not obj.is_custom:
@@ -103,7 +102,6 @@ class FontAdmin(ModelAdmin):
         return super().has_delete_permission(request, obj)
 
     def save_model(self, request, obj, form, change):
-        # Новые шрифты всегда пользовательские
         if not change:
             obj.is_custom = True
         super().save_model(request, obj, form, change)

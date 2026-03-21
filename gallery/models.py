@@ -23,13 +23,14 @@ class Album(models.Model):
 
 
 class Photo(models.Model):
-    album   = models.ForeignKey(Album, on_delete=models.CASCADE,
-                                related_name='photos', verbose_name='Альбом')
-    file    = models.ForeignKey('media_library.MediaFile',
-                                on_delete=models.CASCADE,
-                                verbose_name='Файл')
-    caption = models.CharField('Подпись', max_length=200, blank=True)
-    order   = models.PositiveIntegerField('Порядок', default=0)
+    album        = models.ForeignKey(Album, on_delete=models.CASCADE,
+                                     related_name='photos', verbose_name='Альбом')
+    file         = models.ForeignKey('media_library.MediaFile',
+                                     on_delete=models.CASCADE,
+                                     verbose_name='Файл')
+    caption      = models.CharField('Подпись', max_length=200, blank=True)
+    order        = models.PositiveIntegerField('Порядок', default=0)
+    is_published = models.BooleanField('Опубликовано', default=True)
 
     class Meta:
         verbose_name        = 'Фото'

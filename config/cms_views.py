@@ -10,12 +10,14 @@ TOGGLE_MAP = {
     'section': ('pages.Section',                'is_visible'),
     'article': ('news.Article',                 'is_published'),
     'album':   ('gallery.Album',                'is_published'),
+    'photo':   ('gallery.Photo',               'is_published'),
     'lead':    ('leads.LeadSubmission',         'is_viewed'),
 }
 
 # Разрешённые модели для сортировки
 SORT_MAP = {
-    'category': 'news.Category',
+    'page':     'pages.Page',
+    'section':  'pages.Section',
     'album':    'gallery.Album',
     'photo':    'gallery.Photo',
 }
@@ -72,3 +74,4 @@ def cms_sort(request):
 
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+

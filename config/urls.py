@@ -3,7 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
-from config.cms_views import cms_toggle, cms_sort
+from config.cms_views import cms_toggle, cms_sort, cms_section_fields, cms_section_form_fields
 
 
 class HomeRedirectView(RedirectView):
@@ -16,9 +16,11 @@ class HomeRedirectView(RedirectView):
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('admin/cms-toggle/', cms_toggle, name='cms_toggle'),
     path('admin/cms-sort/', cms_sort, name='cms_sort'),
+    path('admin/cms-section-fields/', cms_section_fields, name='cms_section_fields'),
+    path('admin/cms-section-form-fields/', cms_section_form_fields, name='cms_section_form_fields'),
+    path('admin/', admin.site.urls),
     path('', HomeRedirectView.as_view()),
     path('', include('news.urls')),
     path('', include('gallery.urls')),

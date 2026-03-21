@@ -11,11 +11,14 @@ class MediaFileAdmin(ModelAdmin):
                      'file_size_display', 'uploaded_by', 'uploaded_at']
     list_filter   = ['media_type', 'uploaded_at']
     search_fields = ['original_name', 'alt_text']
-    readonly_fields = ['preview', 'original_name', 'media_type',
-                       'file_size', 'uploaded_by', 'uploaded_at']
+
+    def get_readonly_fields(self, request, obj=None):
+        base = ['preview', 'media_type', 'file_size', 'uploaded_by', 'uploaded_at']
+        if obj:  # редактирование — файл менять нельзя
+            return base + ['file']
+        return base  # создание — файл доступен
 
     def save_model(self, request, obj, form, change):
-        # Автоматическая привязка пользователя при загрузке
         if not obj.pk:
             obj.uploaded_by = request.user
         if obj.file and not obj.original_name:

@@ -1,0 +1,148 @@
+{% extends "admin/change_form.html" %}
+
+{% block after_field_sets %}
+{{ block.super }}
+
+{% include "admin/cms_list_styles.html" %}
+
+{% if photos_data %}
+<div style="margin-top:1.5rem;">
+    <div class="cms-toolbar">
+        <strong class="cms-toolbar__title">Фотографии альбома</strong>
+        <span id="photo-dnd-saved" class="cms-saved-msg">✓ Порядок сохранён</span>
+    </div>
+    <div class="photo-dnd-list" id="photo-dnd-list">
+        {% for p in photos_data %}
+        <div class="photo-dnd-item" draggable="true" data-id="{{ p.id }}">
+            <span class="cms-handle">⠿</span>
+            {% if p.thumb %}
+                <img src="{{ p.thumb }}" class="photo-dnd-thumb" alt="">
+            {% else %}
+                <div class="photo-dnd-thumb photo-dnd-thumb--empty">🖼</div>
+            {% endif %}
+            <span class="photo-dnd-caption">{{ p.caption }}</span>
+            <div class="cms-actions">
+                <a href="{{ p.edit_url }}" class="cms-action cms-action--edit">Редактировать</a>
+                <a href="{{ p.delete_url }}" class="cms-action cms-action--delete">Удалить</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if add_photo_url %}
+<div style="margin-top:1rem;">
+    <a href="{{ add_photo_url }}"
+       style="display:inline-flex;align-items:center;gap:0.4rem;
+              background:#2563eb;color:#fff;
+              padding:0.55rem 1.25rem;border-radius:6px;
+              font-weight:600;font-size:0.875rem;text-decoration:none;">
+        ＋ Добавить фото
+    </a>
+</div>
+{% endif %}
+
+<style>
+.photo-dnd-list {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.photo-dnd-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: grab;
+    user-select: none;
+    transition: background 0.12s;
+}
+.photo-dnd-item:last-child { border-bottom: none; }
+.photo-dnd-item:hover { background: #f8fafc; }
+.photo-dnd-item.dragging { opacity: 0.35; cursor: grabbing; }
+.photo-dnd-item.drag-over { background: #eff6ff; border-top: 2px solid #2563eb; }
+.photo-dnd-thumb {
+    width: 52px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.photo-dnd-thumb--empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    font-size: 1.2rem;
+}
+.photo-dnd-caption {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+</style>
+
+<script>
+(function () {
+    var list = document.getElementById('photo-dnd-list');
+    if (!list) return;
+    var dragged = null;
+
+    list.addEventListener('dragstart', function (e) {
+        dragged = e.target.closest('.photo-dnd-item');
+        if (!dragged) return;
+        setTimeout(function () { dragged.classList.add('dragging'); }, 0);
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    list.addEventListener('dragend', function () {
+        if (dragged) dragged.classList.remove('dragging');
+        list.querySelectorAll('.photo-dnd-item').forEach(function (el) { el.classList.remove('drag-over'); });
+        dragged = null;
+    });
+    list.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        var target = e.target.closest('.photo-dnd-item');
+        if (!target || target === dragged) return;
+        list.querySelectorAll('.photo-dnd-item').forEach(function (el) { el.classList.remove('drag-over'); });
+        target.classList.add('drag-over');
+    });
+    list.addEventListener('dragleave', function (e) {
+        var target = e.target.closest('.photo-dnd-item');
+        if (target) target.classList.remove('drag-over');
+    });
+    list.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var target = e.target.closest('.photo-dnd-item');
+        if (!target || target === dragged || !dragged) return;
+        target.classList.remove('drag-over');
+        var rect = target.getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) {
+            list.insertBefore(dragged, target);
+        } else {
+            list.insertBefore(dragged, target.nextSibling);
+        }
+        var ids = Array.from(list.querySelectorAll('.photo-dnd-item')).map(function (el) { return parseInt(el.dataset.id, 10); });
+        fetch('/admin/cms-sort/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ model: 'photo', ids: ids }),
+        }).then(function (r) {
+            if (r.ok) {
+                var el = document.getElementById('photo-dnd-saved');
+                if (el) { el.style.display = 'inline'; setTimeout(function () { el.style.display = 'none'; }, 2000); }
+            }
+        });
+    });
+
+    function getCookie(name) {
+        var v = '; ' + document.cookie, p = v.split('; ' + name + '=');
+        if (p.length === 2) return p.pop().split(';').shift();
+        return '';
+    }
+})();
+</script>
+{% endblock %}
