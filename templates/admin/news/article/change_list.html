@@ -1,0 +1,93 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+{% include "admin/cms_list_styles.html" %}
+
+<div class="cms-toolbar">
+    <strong class="cms-toolbar__title">Статьи</strong>
+    <span id="news-saved" class="cms-saved-msg">✓ Сохранено</span>
+</div>
+
+<table class="cms-table">
+    <thead>
+        <tr>
+            <th>Обложка</th>
+            <th>Заголовок</th>
+            <th>Категория</th>
+            <th>Дата публикации</th>
+            <th>Опубликована</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for article in cl.queryset %}
+        <tr class="cms-row" data-id="{{ article.pk }}">
+            <td>
+                {% if article.cover %}
+                    <img src="{{ article.cover.url }}" class="cms-thumb" alt="">
+                {% else %}
+                    <div class="cms-thumb-placeholder">📰</div>
+                {% endif %}
+            </td>
+            <td class="cms-cell-title">
+                <a href="{% url 'admin:news_article_change' article.pk %}">{{ article.title }}</a>
+                {% if article.announce %}
+                    <div class="cms-preview">{{ article.announce|truncatechars:60 }}</div>
+                {% endif %}
+            </td>
+            <td>
+                {% if article.category %}
+                    <span class="cms-badge cms-badge--blue">{{ article.category.name }}</span>
+                {% else %}
+                    <span style="color:#cbd5e1;font-size:0.8rem;">—</span>
+                {% endif %}
+            </td>
+            <td style="font-size:0.82rem;color:#64748b;">
+                {% if article.published_at %}{{ article.published_at|date:"d.m.Y" }}{% else %}—{% endif %}
+            </td>
+            <td>
+                <label class="cms-toggle">
+                    <input type="checkbox" {% if article.is_published %}checked{% endif %}
+                           data-id="{{ article.pk }}" data-model="article">
+                    <span class="cms-toggle__slider"></span>
+                </label>
+            </td>
+            <td>
+                <div class="cms-actions">
+                    <a href="{% url 'admin:news_article_change' article.pk %}" class="cms-action cms-action--edit">Редактировать</a>
+                    <a href="{% url 'admin:news_article_delete' article.pk %}" class="cms-action cms-action--delete">Удалить</a>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="cms-empty">Статей пока нет.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+(function () {
+    document.querySelectorAll('.cms-toggle input[data-model="article"]').forEach(function (chk) {
+        chk.addEventListener('change', function () {
+            fetch('/admin/cms-toggle/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ model: 'article', id: this.dataset.id, field: 'is_published', value: this.checked }),
+            }).then(function (r) {
+                if (r.ok) showSaved('news-saved');
+            });
+        });
+    });
+    function showSaved(id) {
+        var el = document.getElementById(id);
+        el.style.display = 'inline';
+        setTimeout(function () { el.style.display = 'none'; }, 2000);
+    }
+    function getCookie(name) {
+        var v = '; ' + document.cookie, p = v.split('; ' + name + '=');
+        if (p.length === 2) return p.pop().split(';').shift();
+        return '';
+    }
+})();
+</script>
+{% endblock %}

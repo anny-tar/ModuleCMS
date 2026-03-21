@@ -99,7 +99,6 @@ class SectionAdmin(ModelAdmin):
     form          = SectionAdminForm
     list_display  = ['type_badge', '__str__', 'page', 'is_visible']
     list_filter   = ['type', 'page']
-    list_editable = ['is_visible']
     ordering      = ['page', 'order']
 
     def get_readonly_fields(self, request, obj=None):
@@ -112,7 +111,6 @@ class SectionAdmin(ModelAdmin):
         current_type = obj.type if obj else request.POST.get('type')
         base = [(None, {
             'fields':      ['page', 'type', 'title', 'is_visible'],
-            'description': 'Чтобы сменить тип секции — удалите текущую и создайте новую.',
         })]
         if current_type and current_type in SECTION_FORM_MAP:
             typed_fields = list(SECTION_FORM_MAP[current_type].base_fields.keys())

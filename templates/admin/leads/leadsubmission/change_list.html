@@ -1,0 +1,78 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+{% include "admin/cms_list_styles.html" %}
+
+<div class="cms-toolbar">
+    <strong class="cms-toolbar__title">Заявки</strong>
+    <span id="leads-saved" class="cms-saved-msg">✓ Сохранено</span>
+</div>
+
+<table class="cms-table">
+    <thead>
+        <tr>
+            <th>Заявка</th>
+            <th>Данные</th>
+            <th>IP адрес</th>
+            <th>Дата</th>
+            <th>Просмотрена</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for lead in cl.queryset %}
+        <tr class="cms-row">
+            <td class="cms-cell-title">
+                <a href="{% url 'admin:leads_leadsubmission_change' lead.pk %}">#{{ lead.pk }}</a>
+            </td>
+            <td>
+                <div class="cms-preview">
+                    {% for k, v in lead.data.items %}
+                        {% if forloop.counter <= 3 %}<span style="color:#64748b;">{{ k }}:</span> {{ v }}{% if not forloop.last %} &nbsp;·&nbsp; {% endif %}{% endif %}
+                    {% endfor %}
+                </div>
+            </td>
+            <td style="font-size:0.78rem;color:#94a3b8;">{{ lead.ip_address|default:"—" }}</td>
+            <td style="font-size:0.82rem;color:#64748b;">{{ lead.created_at|date:"d.m.Y H:i" }}</td>
+            <td>
+                <label class="cms-toggle">
+                    <input type="checkbox" {% if lead.is_viewed %}checked{% endif %}
+                           data-id="{{ lead.pk }}" data-model="lead">
+                    <span class="cms-toggle__slider"></span>
+                </label>
+            </td>
+            <td>
+                <div class="cms-actions">
+                    <a href="{% url 'admin:leads_leadsubmission_change' lead.pk %}" class="cms-action cms-action--edit">Открыть</a>
+                    <a href="{% url 'admin:leads_leadsubmission_delete' lead.pk %}" class="cms-action cms-action--delete">Удалить</a>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="cms-empty">Заявок пока нет.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+(function () {
+    document.querySelectorAll('.cms-toggle input[data-model="lead"]').forEach(function (chk) {
+        chk.addEventListener('change', function () {
+            fetch('/admin/cms-toggle/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ model: 'lead', id: this.dataset.id, field: 'is_viewed', value: this.checked }),
+            }).then(function (r) { if (r.ok) showSaved('leads-saved'); });
+        });
+    });
+    function showSaved(id) {
+        var el = document.getElementById(id); el.style.display = 'inline';
+        setTimeout(function () { el.style.display = 'none'; }, 2000);
+    }
+    function getCookie(name) {
+        var v = '; ' + document.cookie, p = v.split('; ' + name + '=');
+        if (p.length === 2) return p.pop().split(';').shift(); return '';
+    }
+})();
+</script>
+{% endblock %}

@@ -1,92 +1,48 @@
 {% extends "admin/change_list.html" %}
 
 {% block result_list %}
-<style>
-.page-dnd-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 0.5rem;
-}
-.page-dnd-table th {
-    text-align: left;
-    padding: 0.6rem 1rem;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    opacity: 0.55;
-    border-bottom: 1px solid #e5e7eb;
-}
-.page-dnd-row {
-    border-bottom: 1px solid #f1f5f9;
-    cursor: grab;
-    transition: background 0.15s;
-}
-.page-dnd-row:hover { background: #f8fafc; }
-.page-dnd-row.dragging { opacity: 0.4; cursor: grabbing; }
-.page-dnd-row.drag-over { background: #eff6ff; border-top: 2px solid #2563eb; }
-.page-dnd-row td {
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-    vertical-align: middle;
-}
-.page-dnd-handle { color: #94a3b8; font-size: 1.1rem; width: 32px; cursor: grab; }
-.page-dnd-title a { font-weight: 600; color: #1e293b; text-decoration: none; }
-.page-dnd-title a:hover { color: #2563eb; }
-.page-dnd-slug { font-size: 0.8rem; color: #94a3b8; }
-.page-dnd-type {
-    font-size: 0.8rem; font-weight: 600;
-    padding: 2px 8px; border-radius: 4px;
-    background: #f1f5f9; color: #475569;
-}
-.page-dnd-published { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-.page-dnd-published.yes { background: #10b981; }
-.page-dnd-published.no  { background: #d1d5db; }
-.page-dnd-saved { display: none; font-size: 0.85rem; color: #059669; margin-left: 1rem; }
-.page-dnd-actions { display: flex; gap: 0.75rem; align-items: center; }
-.page-dnd-actions a { font-size: 0.8rem; text-decoration: none; }
-.page-dnd-edit   { color: #2563eb; }
-.page-dnd-delete { color: #dc2626; }
-.page-dnd-edit:hover   { text-decoration: underline; }
-.page-dnd-delete:hover { text-decoration: underline; }
-</style>
+{% include "admin/cms_list_styles.html" %}
 
-<div style="display:flex;align-items:center;margin-bottom:0.75rem;">
-    <strong style="font-size:0.95rem;">Порядок страниц</strong>
-    <span id="page-dnd-saved" class="page-dnd-saved">✓ Порядок сохранён</span>
+<div class="cms-toolbar">
+    <strong class="cms-toolbar__title">Страницы</strong>
+    <span id="page-dnd-saved" class="cms-saved-msg">✓ Сохранено</span>
 </div>
 
-<table class="page-dnd-table" id="page-dnd-table">
+<table class="cms-table" id="page-dnd-table">
     <thead>
         <tr>
             <th style="width:32px;"></th>
             <th>Заголовок</th>
             <th>Тип</th>
-            <th>Опубликована</th>
+            <th>Видима</th>
             <th>Действия</th>
         </tr>
     </thead>
     <tbody>
         {% for page in pages %}
-        <tr class="page-dnd-row" draggable="true" data-id="{{ page.pk }}">
-            <td class="page-dnd-handle">⠿</td>
-            <td class="page-dnd-title">
+        <tr class="cms-row" draggable="true" data-id="{{ page.pk }}">
+            <td class="cms-handle">⠿</td>
+            <td class="cms-cell-title">
                 <a href="{% url 'admin:pages_page_change' page.pk %}">{{ page.title }}</a>
-                <div class="page-dnd-slug">/{{ page.slug }}/</div>
+                <div class="cms-slug">/{{ page.slug }}/</div>
             </td>
-            <td><span class="page-dnd-type">{{ page.get_page_type_display }}</span></td>
+            <td><span class="cms-badge cms-badge--gray">{{ page.get_page_type_display }}</span></td>
             <td>
-                <span class="page-dnd-published {% if page.is_published %}yes{% else %}no{% endif %}"></span>
+                <label class="cms-toggle">
+                    <input type="checkbox" {% if page.is_published %}checked{% endif %}
+                           data-id="{{ page.pk }}" data-model="page">
+                    <span class="cms-toggle__slider"></span>
+                </label>
             </td>
             <td>
-                <div class="page-dnd-actions">
-                    <a href="{% url 'admin:pages_page_change' page.pk %}" class="page-dnd-edit">Редактировать</a>
-                    <a href="{% url 'admin:pages_page_delete' page.pk %}" class="page-dnd-delete">Удалить</a>
+                <div class="cms-actions">
+                    <a href="{% url 'admin:pages_page_change' page.pk %}" class="cms-action cms-action--edit">Редактировать</a>
+                    <a href="{% url 'admin:pages_page_delete' page.pk %}" class="cms-action cms-action--delete">Удалить</a>
                 </div>
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" style="padding:1rem;opacity:0.5;">Страниц пока нет.</td></tr>
+        <tr><td colspan="5" class="cms-empty">Страниц пока нет.</td></tr>
         {% endfor %}
     </tbody>
 </table>
@@ -95,81 +51,68 @@
 (function () {
     var tbody = document.querySelector('#page-dnd-table tbody');
     if (!tbody) return;
-
     var dragged = null;
 
     tbody.addEventListener('dragstart', function (e) {
-        dragged = e.target.closest('.page-dnd-row');
+        dragged = e.target.closest('.cms-row');
         if (!dragged) return;
         setTimeout(function () { dragged.classList.add('dragging'); }, 0);
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', dragged.dataset.id);
     });
-
     tbody.addEventListener('dragend', function () {
         if (dragged) dragged.classList.remove('dragging');
-        tbody.querySelectorAll('.page-dnd-row').forEach(function (el) {
-            el.classList.remove('drag-over');
-        });
+        tbody.querySelectorAll('.cms-row').forEach(function (el) { el.classList.remove('drag-over'); });
         dragged = null;
     });
-
     tbody.addEventListener('dragover', function (e) {
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        var target = e.target.closest('.page-dnd-row');
+        var target = e.target.closest('.cms-row');
         if (!target || target === dragged) return;
-        tbody.querySelectorAll('.page-dnd-row').forEach(function (el) {
-            el.classList.remove('drag-over');
-        });
+        tbody.querySelectorAll('.cms-row').forEach(function (el) { el.classList.remove('drag-over'); });
         target.classList.add('drag-over');
     });
-
     tbody.addEventListener('dragleave', function (e) {
-        var target = e.target.closest('.page-dnd-row');
+        var target = e.target.closest('.cms-row');
         if (target) target.classList.remove('drag-over');
     });
-
     tbody.addEventListener('drop', function (e) {
         e.preventDefault();
-        var target = e.target.closest('.page-dnd-row');
+        var target = e.target.closest('.cms-row');
         if (!target || target === dragged || !dragged) return;
         target.classList.remove('drag-over');
-
-        var rect   = target.getBoundingClientRect();
-        var middle = rect.top + rect.height / 2;
-        if (e.clientY < middle) {
+        var rect = target.getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) {
             tbody.insertBefore(dragged, target);
         } else {
             tbody.insertBefore(dragged, target.nextSibling);
         }
+        var ids = Array.from(tbody.querySelectorAll('.cms-row')).map(function (el) { return parseInt(el.dataset.id, 10); });
+        cmsPost('/pages/sort/', { ids: ids }, 'page-dnd-saved');
+    });
 
-        var ids = Array.from(
-            tbody.querySelectorAll('.page-dnd-row')
-        ).map(function (el) { return parseInt(el.dataset.id, 10); });
-
-        fetch('/pages/sort/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: JSON.stringify({ ids: ids }),
-        }).then(function (r) {
-            if (r.ok) {
-                var saved = document.getElementById('page-dnd-saved');
-                if (saved) {
-                    saved.style.display = 'inline';
-                    setTimeout(function () { saved.style.display = 'none'; }, 2000);
-                }
-            }
+    document.querySelectorAll('.cms-toggle input[data-model="page"]').forEach(function (chk) {
+        chk.addEventListener('change', function () {
+            var id = this.dataset.id;
+            cmsPost('/admin/cms-toggle/', { model: 'page', id: id, field: 'is_published', value: this.checked }, 'page-dnd-saved');
         });
     });
 
+    function cmsPost(url, data, savedId) {
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify(data),
+        }).then(function (r) { if (r.ok) showSaved(savedId); });
+    }
+    function showSaved(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = 'inline';
+        setTimeout(function () { el.style.display = 'none'; }, 2000);
+    }
     function getCookie(name) {
-        var value = '; ' + document.cookie;
-        var parts = value.split('; ' + name + '=');
-        if (parts.length === 2) return parts.pop().split(';').shift();
+        var v = '; ' + document.cookie, p = v.split('; ' + name + '=');
+        if (p.length === 2) return p.pop().split(';').shift();
         return '';
     }
 })();

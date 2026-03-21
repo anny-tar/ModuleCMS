@@ -1,0 +1,72 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+{% include "admin/cms_list_styles.html" %}
+
+<style>
+.media-type-icon { font-size: 1.3rem; }
+</style>
+
+<div class="cms-toolbar">
+    <strong class="cms-toolbar__title">Медиафайлы</strong>
+</div>
+
+<table class="cms-table">
+    <thead>
+        <tr>
+            <th>Превью</th>
+            <th>Имя файла</th>
+            <th>Тип</th>
+            <th>Размер</th>
+            <th>Загрузил</th>
+            <th>Дата</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for mf in cl.queryset %}
+        <tr class="cms-row">
+            <td>
+                {% if mf.is_image and mf.file %}
+                    <img src="{{ mf.url }}" class="cms-thumb" alt="{{ mf.alt_text }}">
+                {% elif mf.media_type == 'video' %}
+                    <div class="cms-thumb-placeholder">🎬</div>
+                {% else %}
+                    <div class="cms-thumb-placeholder">📄</div>
+                {% endif %}
+            </td>
+            <td class="cms-cell-title">
+                <a href="{% url 'admin:media_library_mediafile_change' mf.pk %}">{{ mf.original_name|truncatechars:40 }}</a>
+                {% if mf.alt_text %}
+                    <div class="cms-preview">{{ mf.alt_text }}</div>
+                {% endif %}
+            </td>
+            <td>
+                {% if mf.media_type == 'image' %}
+                    <span class="cms-badge cms-badge--blue">Изображение</span>
+                {% elif mf.media_type == 'video' %}
+                    <span class="cms-badge cms-badge--purple">Видео</span>
+                {% else %}
+                    <span class="cms-badge cms-badge--gray">Документ</span>
+                {% endif %}
+            </td>
+            <td style="font-size:0.82rem;color:#64748b;">
+                {% if mf.file_size < 1024 %}{{ mf.file_size }} Б
+                {% elif mf.file_size < 1048576 %}{{ mf.file_size|divisibleby:1024 }} КБ
+                {% else %}{{ mf.file_size }} МБ{% endif %}
+            </td>
+            <td style="font-size:0.82rem;color:#64748b;">{{ mf.uploaded_by|default:"—" }}</td>
+            <td style="font-size:0.82rem;color:#64748b;">{{ mf.uploaded_at|date:"d.m.Y" }}</td>
+            <td>
+                <div class="cms-actions">
+                    <a href="{% url 'admin:media_library_mediafile_change' mf.pk %}" class="cms-action cms-action--edit">Открыть</a>
+                    <a href="{% url 'admin:media_library_mediafile_delete' mf.pk %}" class="cms-action cms-action--delete">Удалить</a>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="cms-empty">Файлов пока нет.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

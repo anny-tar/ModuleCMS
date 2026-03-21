@@ -309,7 +309,7 @@ class SectionAdminForm(forms.ModelForm):
 
     class Meta:
         model  = Section
-        fields = ['page', 'type', 'title', 'order', 'is_visible']
+        fields = ['page', 'type', 'title', 'is_visible']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
