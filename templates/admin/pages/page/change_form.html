@@ -1,0 +1,175 @@
+{% extends "admin/change_form.html" %}
+
+{% block after_field_sets %}
+{{ block.super }}
+
+{% include "admin/cms_list_styles.html" %}
+
+{% if sections_data %}
+<div style="margin-top:1.5rem;">
+    <div class="cms-toolbar">
+        <strong class="cms-toolbar__title">Секции страницы</strong>
+        <span id="section-dnd-saved" class="cms-saved-msg">✓ Порядок сохранён</span>
+    </div>
+    <div class="section-dnd-list" id="section-dnd-list">
+        {% for s in sections_data %}
+        <div class="section-dnd-item" draggable="true" data-id="{{ s.id }}">
+            <span class="cms-handle">⠿</span>
+            <span class="section-dnd-badge">{{ s.type_label }}</span>
+            <span class="section-dnd-title">{{ s.title }}</span>
+            <label class="cms-toggle" style="margin-left:auto;flex-shrink:0;">
+                <input type="checkbox" {% if s.is_visible %}checked{% endif %}
+                       data-id="{{ s.id }}" data-model="section">
+                <span class="cms-toggle__slider"></span>
+            </label>
+            <div class="cms-actions" style="flex-shrink:0;">
+                <a href="{{ s.edit_url }}" class="cms-action cms-action--edit">Редактировать</a>
+                <a href="{{ s.delete_url }}" class="cms-action cms-action--delete">Удалить</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div style="margin-top:1.5rem;">
+    <div class="cms-toolbar">
+        <strong class="cms-toolbar__title">Секции страницы</strong>
+    </div>
+    <div style="padding:1.5rem 1rem;color:#94a3b8;font-size:0.875rem;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;background:#fff;">
+        Секций пока нет.
+    </div>
+</div>
+{% endif %}
+
+{% if add_section_url %}
+<div style="margin-top:1rem;">
+    <a href="{{ add_section_url }}"
+       style="display:inline-flex;align-items:center;gap:0.4rem;
+              background:#2563eb;color:#fff;
+              padding:0.55rem 1.25rem;border-radius:6px;
+              font-weight:600;font-size:0.875rem;text-decoration:none;">
+        ＋ Добавить секцию
+    </a>
+</div>
+{% endif %}
+
+<style>
+.section-dnd-list {
+    border: 1px solid #e5e7eb;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+}
+.section-dnd-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: grab;
+    user-select: none;
+    transition: background 0.12s;
+}
+.section-dnd-item:last-child { border-bottom: none; }
+.section-dnd-item:hover { background: #f8fafc; }
+.section-dnd-item.dragging { opacity: 0.35; cursor: grabbing; }
+.section-dnd-item.drag-over { background: #eff6ff; border-top: 2px solid #2563eb; }
+.section-dnd-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.section-dnd-title {
+    flex: 1;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Убираем pointer-events у дочерних элементов чтобы DnD не ломался */
+.section-dnd-item .cms-toggle,
+.section-dnd-item .cms-actions {
+    pointer-events: auto;
+}
+</style>
+
+<script>
+(function () {
+    var list = document.getElementById('section-dnd-list');
+    if (!list) return;
+    var dragged = null;
+
+    list.addEventListener('dragstart', function (e) {
+        dragged = e.target.closest('.section-dnd-item');
+        if (!dragged) return;
+        setTimeout(function () { dragged.classList.add('dragging'); }, 0);
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    list.addEventListener('dragend', function () {
+        if (dragged) dragged.classList.remove('dragging');
+        list.querySelectorAll('.section-dnd-item').forEach(function (el) { el.classList.remove('drag-over'); });
+        dragged = null;
+    });
+    list.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        var target = e.target.closest('.section-dnd-item');
+        if (!target || target === dragged) return;
+        list.querySelectorAll('.section-dnd-item').forEach(function (el) { el.classList.remove('drag-over'); });
+        target.classList.add('drag-over');
+    });
+    list.addEventListener('dragleave', function (e) {
+        var target = e.target.closest('.section-dnd-item');
+        if (target) target.classList.remove('drag-over');
+    });
+    list.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var target = e.target.closest('.section-dnd-item');
+        if (!target || target === dragged || !dragged) return;
+        target.classList.remove('drag-over');
+        var rect = target.getBoundingClientRect();
+        if (e.clientY < rect.top + rect.height / 2) list.insertBefore(dragged, target);
+        else list.insertBefore(dragged, target.nextSibling);
+        var ids = Array.from(list.querySelectorAll('.section-dnd-item')).map(function (el) {
+            return parseInt(el.dataset.id, 10);
+        });
+        fetch('/admin/cms-sort/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ model: 'section', ids: ids }),
+        }).then(function (r) {
+            if (r.ok) {
+                var el = document.getElementById('section-dnd-saved');
+                if (el) { el.style.display = 'inline'; setTimeout(function () { el.style.display = 'none'; }, 2000); }
+            }
+        });
+    });
+
+    // Toggle видимости секций
+    list.querySelectorAll('.cms-toggle input[data-model="section"]').forEach(function (chk) {
+        chk.addEventListener('change', function () {
+            var self = this;
+            fetch('/admin/cms-toggle/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ model: 'section', id: self.dataset.id, field: 'is_visible', value: self.checked }),
+            });
+        });
+    });
+
+    function getCookie(name) {
+        var v = '; ' + document.cookie, p = v.split('; ' + name + '=');
+        if (p.length === 2) return p.pop().split(';').shift();
+        return '';
+    }
+})();
+</script>
+{% endblock %}

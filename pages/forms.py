@@ -301,6 +301,12 @@ SECTION_FORM_MAP = {
 
 # ---------------------------------------------------------------------------
 class SectionAdminForm(forms.ModelForm):
+    """
+    Форма секции: все поля всех типов рендерятся сразу (скрытые),
+    JS показывает нужные при смене типа в дропдауне.
+    Каждое поле получает атрибут data-section-type чтобы JS знал
+    к какому типу оно относится.
+    """
 
     class Meta:
         model  = Section
@@ -314,17 +320,35 @@ class SectionAdminForm(forms.ModelForm):
         post_data    = args[0] if args and hasattr(args[0], 'get') else None
         current_type = (post_data.get('type') if post_data else None) or (instance.type if instance else None)
 
-        if not current_type or current_type not in SECTION_FORM_MAP:
-            return
+        # Добавляем поля ВСЕХ типов — JS будет показывать/скрывать
+        # Ключ поля: если имя уникально — используем как есть.
+        # items_raw используется в нескольких типах — добавляем его один раз
+        # с data-section-type перечисляющим все типы.
+        seen_fields = {}  # field_name -> [type1, type2, ...]
 
-        form_class    = SECTION_FORM_MAP[current_type]
+        for type_key, form_class in SECTION_FORM_MAP.items():
+            for name in form_class.base_fields:
+                seen_fields.setdefault(name, []).append(type_key)
+
+        # Данные текущего типа для заполнения начальных значений
         initial_typed = {}
-        if instance and instance.data and not post_data and hasattr(form_class, 'from_data'):
-            initial_typed = form_class.from_data(instance.data)
+        if instance and instance.data and not post_data and current_type:
+            form_class = SECTION_FORM_MAP.get(current_type)
+            if form_class and hasattr(form_class, 'from_data'):
+                initial_typed = form_class.from_data(instance.data)
 
-        for name, field in form_class.base_fields.items():
-            f = copy.deepcopy(field)
+        for name, types_list in seen_fields.items():
+            # Берём определение поля из первого типа где оно встречается
+            first_type = types_list[0]
+            source_field = SECTION_FORM_MAP[first_type].base_fields[name]
+            f = copy.deepcopy(source_field)
             f.required = False
+
+            # Добавляем data-section-type к виджету
+            types_str = ','.join(types_list)
+            if hasattr(f.widget, 'attrs'):
+                f.widget.attrs['data-section-type'] = types_str
+            
             self.fields[name] = f
             if name in initial_typed:
                 self.initial[name] = initial_typed[name]
