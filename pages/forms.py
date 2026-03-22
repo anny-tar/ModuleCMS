@@ -7,6 +7,8 @@ class HeroSectionForm(forms.Form):
     subheading  = forms.CharField(label='Подзаголовок', max_length=300, required=False)
     button_text = forms.CharField(label='Текст кнопки', max_length=100, required=False)
     button_url  = forms.CharField(label='Ссылка кнопки', max_length=200, required=False)
+    # ID файла из медиабиблиотеки — выбирается через JS-пикер
+    image_id    = forms.IntegerField(label='Фоновое изображение (ID)', required=False)
 
     def to_data(self):
         d = self.cleaned_data
@@ -15,6 +17,7 @@ class HeroSectionForm(forms.Form):
             'subheading':  d.get('subheading', ''),
             'button_text': d.get('button_text', ''),
             'button_url':  d.get('button_url', ''),
+            'image_id':    d.get('image_id') or None,
         }
 
     @staticmethod
@@ -24,6 +27,7 @@ class HeroSectionForm(forms.Form):
             'subheading':  data.get('subheading', ''),
             'button_text': data.get('button_text', ''),
             'button_url':  data.get('button_url', ''),
+            'image_id':    data.get('image_id') or '',
         }
 
 
@@ -283,6 +287,38 @@ class TestimonialsSectionForm(forms.Form):
         )}
 
 
+class ContactsSectionForm(forms.Form):
+    """Новая секция: контактная информация в произвольном месте страницы."""
+    address   = forms.CharField(label='Адрес', widget=forms.Textarea(attrs={'rows': 2}), required=False)
+    phone     = forms.CharField(label='Телефон', max_length=100, required=False)
+    email     = forms.EmailField(label='Email', required=False)
+    hours     = forms.CharField(label='Режим работы', max_length=200, required=False)
+    map_url   = forms.URLField(label='Ссылка на карту (Google Maps embed)', max_length=500, required=False)
+
+    def to_data(self):
+        d = self.cleaned_data
+        return {
+            'address': d.get('address', ''),
+            'phone':   d.get('phone', ''),
+            'email':   d.get('email', ''),
+            'hours':   d.get('hours', ''),
+            'map_url': d.get('map_url', ''),
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {
+            'address': data.get('address', ''),
+            'phone':   data.get('phone', ''),
+            'email':   data.get('email', ''),
+            'hours':   data.get('hours', ''),
+            'map_url': data.get('map_url', ''),
+        }
+
+
+# ---------------------------------------------------------------------------
+# Единый реестр: тип → класс формы.
+# Используется в SectionAdminForm и в AJAX-view section_fields.
 # ---------------------------------------------------------------------------
 SECTION_FORM_MAP = {
     'hero':         HeroSectionForm,
@@ -296,78 +332,40 @@ SECTION_FORM_MAP = {
     'form':         FormSectionForm,
     'faq':          FaqSectionForm,
     'testimonials': TestimonialsSectionForm,
+    'contacts':     ContactsSectionForm,
 }
 
 
 # ---------------------------------------------------------------------------
+# Форма секции для Django admin.
+# Базовые поля (page, type, title, is_visible) — всегда видны.
+# Поля конкретного типа подгружаются через AJAX и рендерятся JS-редактором.
+# При сохранении скрытый <textarea id="section-data-input"> содержит JSON,
+# который мы кладём в obj.data.
+# ---------------------------------------------------------------------------
 class SectionAdminForm(forms.ModelForm):
-    """
-    Форма секции: все поля всех типов рендерятся сразу (скрытые),
-    JS показывает нужные при смене типа в дропдауне.
-    Каждое поле получает атрибут data-section-type чтобы JS знал
-    к какому типу оно относится.
-    """
+
+    # Скрытое поле — JSON с данными секции, заполняется JS перед сабмитом
+    section_data = forms.CharField(
+        widget=forms.HiddenInput(attrs={'id': 'section-data-input'}),
+        required=False,
+    )
 
     class Meta:
         model  = Section
-        fields = ['page', 'type', 'title', 'is_visible']
-
-    def __init__(self, *args, **kwargs):
-        import copy
-        super().__init__(*args, **kwargs)
-        instance = kwargs.get('instance')
-
-        post_data    = args[0] if args and hasattr(args[0], 'get') else None
-        current_type = (post_data.get('type') if post_data else None) or (instance.type if instance else None)
-
-        # Добавляем поля ВСЕХ типов — JS будет показывать/скрывать
-        # Ключ поля: если имя уникально — используем как есть.
-        # items_raw используется в нескольких типах — добавляем его один раз
-        # с data-section-type перечисляющим все типы.
-        seen_fields = {}  # field_name -> [type1, type2, ...]
-
-        for type_key, form_class in SECTION_FORM_MAP.items():
-            for name in form_class.base_fields:
-                seen_fields.setdefault(name, []).append(type_key)
-
-        # Данные текущего типа для заполнения начальных значений
-        initial_typed = {}
-        if instance and instance.data and not post_data and current_type:
-            form_class = SECTION_FORM_MAP.get(current_type)
-            if form_class and hasattr(form_class, 'from_data'):
-                initial_typed = form_class.from_data(instance.data)
-
-        for name, types_list in seen_fields.items():
-            # Берём определение поля из первого типа где оно встречается
-            first_type = types_list[0]
-            source_field = SECTION_FORM_MAP[first_type].base_fields[name]
-            f = copy.deepcopy(source_field)
-            f.required = False
-
-            # Добавляем data-section-type к виджету
-            types_str = ','.join(types_list)
-            if hasattr(f.widget, 'attrs'):
-                f.widget.attrs['data-section-type'] = types_str
-            
-            self.fields[name] = f
-            if name in initial_typed:
-                self.initial[name] = initial_typed[name]
+        fields = ['page', 'type', 'title', 'is_visible', 'section_data']
 
     def save(self, commit=True):
+        import json
         obj = super().save(commit=False)
-        if obj.type in SECTION_FORM_MAP:
-            form_class = SECTION_FORM_MAP[obj.type]
-            typed_data = {
-                name: self.cleaned_data[name]
-                for name in form_class.base_fields
-                if name in self.cleaned_data
-            }
-            if typed_data:
-                typed_form = form_class(data=typed_data)
-                typed_form.is_valid()
-                obj.data = typed_form.to_data() if hasattr(typed_form, 'to_data') else typed_data
-            else:
+        raw = self.cleaned_data.get('section_data', '').strip()
+        if raw:
+            try:
+                obj.data = json.loads(raw)
+            except (ValueError, TypeError):
                 obj.data = obj.data or {}
+        else:
+            obj.data = obj.data or {}
         if commit:
             obj.save()
         return obj

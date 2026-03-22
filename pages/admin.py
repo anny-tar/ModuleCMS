@@ -2,8 +2,9 @@ from django.contrib import admin
 from django.db.models import Max
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.utils.html import format_html
 from unfold.admin import ModelAdmin
-from .models import Page, Section
+from .models import Page, Section, SECTION_ICONS
 from .forms import SectionAdminForm
 
 
@@ -28,6 +29,7 @@ class PageAdmin(ModelAdmin):
             for s in sections:
                 sections_data.append({
                     'id':         s.pk,
+                    'icon':       s.icon(),
                     'title':      s.title or s.get_type_display(),
                     'type_label': s.get_type_display(),
                     'is_visible': s.is_visible,
@@ -46,9 +48,18 @@ class PageAdmin(ModelAdmin):
 @admin.register(Section)
 class SectionAdmin(ModelAdmin):
     form         = SectionAdminForm
-    list_display = ['__str__', 'page', 'type', 'order', 'is_visible']
+    list_display = ['icon_and_type', 'page', 'order', 'is_visible']
     list_filter  = ['type', 'is_visible', 'page']
     ordering     = ['page', 'order']
+
+    @admin.display(description='Тип секции')
+    def icon_and_type(self, obj):
+        """Колонка с иконкой и названием типа в списке секций."""
+        return format_html(
+            '<span style="font-size:1.1em;margin-right:6px;">{}</span>{}',
+            obj.icon(),
+            obj.get_type_display(),
+        )
 
     def get_changeform_initial_data(self, request):
         initial = super().get_changeform_initial_data(request)

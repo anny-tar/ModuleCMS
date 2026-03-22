@@ -1,432 +1,411 @@
 /**
  * section_editor.js
- * Динамические редакторы для каждого типа секции.
- * Unfold рендерит поля через .field-line.field-XXX (не .form-row.field-XXX).
- * Все поля всех типов рендерятся сразу (data-section-type на виджете),
- * JS показывает нужные при смене типа в дропдауне — без перезагрузки.
+ *
+ * Логика работы:
+ * 1. При загрузке страницы читаем текущий тип из дропдауна.
+ * 2. Делаем GET /pages/section/fields/?type=X&section_id=Y
+ * 3. Django возвращает JSON с описанием полей и текущими значениями.
+ * 4. JS рендерит редактор — красивые инпуты вместо сырых textarea.
+ * 5. Перед сабмитом собираем данные из редактора в JSON
+ *    и кладём в скрытый input #section-data-input.
+ * 6. Django читает этот JSON и сохраняет в Section.data.
  */
 
 (function () {
     'use strict';
 
     // -----------------------------------------------------------------------
+    // Иконки типов — дублируем из Python для использования в UI
+    // -----------------------------------------------------------------------
+    var ICONS = {
+        hero:         '🖼️',
+        text:         '📝',
+        counters:     '🔢',
+        cards:        '🃏',
+        team:         '👥',
+        steps:        '👣',
+        table:        '📊',
+        chart_pie:    '🥧',
+        form:         '📬',
+        faq:          '❓',
+        testimonials: '💬',
+        contacts:     '📍',
+    };
+
+    // -----------------------------------------------------------------------
+    // Типы у которых нужен построитель строк (вместо одного textarea)
+    // -----------------------------------------------------------------------
+    var ROW_BUILDERS = {
+        counters:     { cols: ['Значение', 'Подпись'],                        field: 'items_raw', addLabel: '+ Добавить счётчик' },
+        cards:        { cols: ['Иконка', 'Заголовок', 'Текст'],               field: 'items_raw', addLabel: '+ Добавить карточку' },
+        team:         { cols: ['Имя', 'Должность', 'Описание'],               field: 'items_raw', addLabel: '+ Добавить участника' },
+        steps:        { cols: ['Заголовок шага', 'Описание'],                 field: 'items_raw', addLabel: '+ Добавить шаг' },
+        faq:          { cols: ['Вопрос', 'Ответ'],                            field: 'items_raw', addLabel: '+ Добавить вопрос', lastTextarea: true },
+        testimonials: { cols: ['Имя', 'Текст отзыва'],                       field: 'items_raw', addLabel: '+ Добавить отзыв',  lastTextarea: true },
+        chart_pie:    { cols: ['Подпись', 'Значение'],                        field: 'items_raw', addLabel: '+ Добавить сегмент' },
+    };
+
+    // -----------------------------------------------------------------------
     // Утилиты DOM
     // -----------------------------------------------------------------------
-
-    function el(tag, attrs, children) {
+    function el(tag, attrs) {
         var node = document.createElement(tag);
-        if (attrs) Object.keys(attrs).forEach(function (k) {
-            if (k === 'className') node.className = attrs[k];
-            else if (k === 'style') node.style.cssText = attrs[k];
+        if (!attrs) return node;
+        Object.keys(attrs).forEach(function (k) {
+            if (k === 'cls')       node.className = attrs[k];
             else if (k === 'html') node.innerHTML = attrs[k];
-            else node.setAttribute(k, attrs[k]);
+            else if (k === 'text') node.textContent = attrs[k];
+            else                   node.setAttribute(k, attrs[k]);
         });
-        if (children) children.forEach(function (c) { if (c) node.appendChild(c); });
         return node;
     }
 
-    function btn(label, cls, onClick) {
-        var b = el('button', { type: 'button', className: 'se-btn ' + cls, html: label });
-        b.addEventListener('click', onClick);
-        return b;
-    }
-
-    function input(placeholder, value, cls) {
-        return el('input', {
-            type: 'text',
-            className: 'se-input ' + (cls || ''),
-            placeholder: placeholder,
-            value: value || '',
-        });
-    }
-
-    function textarea(placeholder, value) {
-        var t = el('textarea', { className: 'se-input se-textarea', placeholder: placeholder });
-        t.value = value || '';
-        return t;
-    }
-
-    function select(options, value) {
-        var s = el('select', { className: 'se-input se-select' });
-        options.forEach(function (opt) {
-            var o = el('option', { value: opt.value });
-            o.textContent = opt.label;
-            if (opt.value === value) o.selected = true;
-            s.appendChild(o);
-        });
-        return s;
-    }
-
-    function checkbox(label, checked) {
-        var wrap = el('label', { className: 'se-checkbox-label' });
-        var cb = el('input', { type: 'checkbox' });
-        cb.checked = !!checked;
-        wrap.appendChild(cb);
-        wrap.appendChild(document.createTextNode(' ' + label));
-        return wrap;
-    }
-
-    function makeRow(fields) {
-        var row = el('div', { className: 'se-row' });
-        fields.forEach(function (f) { row.appendChild(f); });
-        row.appendChild(btn('✕', 'se-btn--remove', function () {
-            row.parentNode && row.parentNode.removeChild(row);
-        }));
-        return row;
-    }
-
-    function wrapEditor(title, list, addBtn) {
-        var wrapper = el('div', { className: 'se-editor' });
-        var header  = el('div', { className: 'se-editor__header' });
-        header.appendChild(el('strong', { html: title }));
-        wrapper.appendChild(header);
-        wrapper.appendChild(list);
-        wrapper.appendChild(addBtn);
-        return wrapper;
-    }
-
-    function parseLines(raw, n) {
-        if (!raw) return [];
-        return raw.trim().split('\n').map(function (line) {
-            return line.split('|', n);
-        }).filter(function (p) { return p[0] && p[0].trim(); });
+    function getCsrf() {
+        var v = '; ' + document.cookie, p = v.split('; csrftoken=');
+        if (p.length === 2) return p.pop().split(';').shift();
+        return '';
     }
 
     // -----------------------------------------------------------------------
-    // Найти .field-line контейнер поля по имени (Unfold-специфично)
+    // Состояние
     // -----------------------------------------------------------------------
+    var mount      = null;   // контейнер куда рендерим редактор
+    var dataInput  = null;   // #section-data-input (скрытый)
+    var typeSelect = null;   // select[name="type"]
+    var sectionId  = null;   // pk секции если редактируем существующую
 
-    function findFieldRow(fieldName) {
-        // Unfold: <div class="field-line field-XXX ...">
-        return document.querySelector('.field-line.field-' + fieldName);
+    // Текущие данные редактора — заполняются при загрузке полей
+    var currentFields = [];  // [{name, type, value, ...}]
+
+    // -----------------------------------------------------------------------
+    // Главная функция: загрузить поля для типа
+    // -----------------------------------------------------------------------
+    function loadFields(type) {
+        if (!mount) return;
+
+        mount.innerHTML = '<div class="se-loading">Загрузка полей…</div>';
+
+        var url = '/admin/section-fields/?type=' + encodeURIComponent(type);
+        if (sectionId) url += '&section_id=' + sectionId;
+
+        fetch(url, {
+            headers: { 'X-CSRFToken': getCsrf(), 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                currentFields = data.fields || [];
+                renderEditor(type, currentFields);
+            })
+            .catch(function () {
+                mount.innerHTML = '<div class="se-error">Не удалось загрузить поля. Перезагрузите страницу.</div>';
+            });
     }
 
-    function findFieldInput(fieldName) {
-        return document.querySelector('[name="' + fieldName + '"]');
+    // -----------------------------------------------------------------------
+    // Рендер редактора
+    // -----------------------------------------------------------------------
+    function renderEditor(type, fields) {
+        mount.innerHTML = '';
+
+        if (!fields.length) {
+            // contacts и подобные — нет своих полей, данные берутся из SiteSettings
+            var note = el('div', { cls: 'se-empty-note' });
+            note.textContent = ICONS[type] + '  Эта секция не требует дополнительных данных.';
+            mount.appendChild(note);
+            setDataInput({});
+            return;
+        }
+
+        var header = el('div', { cls: 'se-header' });
+        var icon   = el('span', { cls: 'se-header__icon', text: ICONS[type] || '📄' });
+        header.appendChild(icon);
+        mount.appendChild(header);
+
+        // Построитель строк (counters, cards, team, steps, faq, testimonials, chart_pie)
+        var builder = ROW_BUILDERS[type];
+        if (builder) {
+            renderRowBuilder(type, fields, builder);
+            return;
+        }
+
+        // table — особый случай
+        if (type === 'table') {
+            renderTableBuilder(fields);
+            return;
+        }
+
+        // form — построитель полей формы
+        if (type === 'form') {
+            renderFormBuilder(fields);
+            return;
+        }
+
+        // hero, text, contacts — обычные поля
+        renderSimpleFields(fields);
     }
 
     // -----------------------------------------------------------------------
-    // Показать/скрыть поля по типу секции
+    // Обычные поля (hero, text, contacts)
     // -----------------------------------------------------------------------
+    function renderSimpleFields(fields) {
+        var wrapper = el('div', { cls: 'se-simple' });
 
-    // Все поля специфичные для типов (те что рендерятся через SectionAdminForm)
-    var ALL_TYPE_FIELD_NAMES = [
-        'heading', 'subheading', 'button_text', 'button_url',  // hero
-        'content',                                               // text
-        'items_raw',                                             // counters/cards/team/steps/faq/testimonials/chart_pie
-        'chart_title',                                           // chart_pie
-        'fields_raw',                                            // form
-        'headers_raw', 'rows_raw',                              // table
-    ];
+        fields.forEach(function (f) {
+            if (f.type === 'hidden') return;
 
-    // Какие поля показывать для каждого типа
-    var TYPE_FIELDS = {
-        'hero':         ['heading', 'subheading', 'button_text', 'button_url'],
-        'text':         ['content'],
-        'counters':     ['items_raw'],
-        'cards':        ['items_raw'],
-        'team':         ['items_raw'],
-        'steps':        ['items_raw'],
-        'faq':          ['items_raw'],
-        'testimonials': ['items_raw'],
-        'chart_pie':    ['chart_title', 'items_raw'],
-        'form':         ['fields_raw'],
-        'table':        ['headers_raw', 'rows_raw'],
-        'contacts':     [],
-    };
+            var group = el('div', { cls: 'se-field-group' });
+            var label = el('label', { cls: 'se-label' });
+            label.textContent = f.label + (f.required ? ' *' : '');
+            group.appendChild(label);
 
-    function applyFieldVisibility(type) {
-        var visibleFields = TYPE_FIELDS[type] || [];
-
-        ALL_TYPE_FIELD_NAMES.forEach(function (name) {
-            var row = findFieldRow(name);
-            if (!row) return;
-            if (visibleFields.indexOf(name) !== -1) {
-                row.style.display = '';
+            var input;
+            if (f.type === 'textarea') {
+                input = el('textarea', { cls: 'se-input se-textarea', name: f.name });
+                input.value = f.value || '';
             } else {
-                row.style.display = 'none';
+                input = el('input', { cls: 'se-input', type: f.type || 'text', name: f.name });
+                input.value = f.value || '';
             }
+            if (f.required) input.required = true;
+            group.appendChild(input);
+
+            if (f.help_text) {
+                var hint = el('div', { cls: 'se-hint', text: f.help_text });
+                group.appendChild(hint);
+            }
+
+            // Специальный пикер для image_id
+            if (f.name === 'image_id') {
+                renderImagePicker(group, input);
+            }
+
+            wrapper.appendChild(group);
+        });
+
+        mount.appendChild(wrapper);
+        bindSimpleSubmit(fields);
+    }
+
+    function bindSimpleSubmit(fields) {
+        onSubmit(function () {
+            var result = {};
+            fields.forEach(function (f) {
+                if (f.type === 'hidden') return;
+                var inp = mount.querySelector('[name="' + f.name + '"]');
+                if (inp) result[f.name] = inp.value;
+            });
+            setDataInput(result);
         });
     }
 
     // -----------------------------------------------------------------------
-    // Контейнер для динамических редакторов (counters, cards, etc.)
+    // Пикер медиафайла для hero.image_id
     // -----------------------------------------------------------------------
+    function renderImagePicker(group, hiddenInput) {
+        var preview = el('div', { cls: 'se-image-preview' });
+        var btn     = el('button', { type: 'button', cls: 'se-btn se-btn--pick', text: 'Выбрать из медиабиблиотеки' });
 
-    var editorMount   = null;
-    var submitHandlers = [];
-
-    function getOrCreateMount() {
-        if (editorMount) return editorMount;
-        editorMount = el('div', { className: 'se-mount' });
-
-        // Вставляем после последнего fieldset внутри формы, перед submit-row
-        var form = document.querySelector('#content-main form, form#section_form');
-        if (!form) return editorMount;
-
-        var submitRow = document.getElementById('submit-row');
-        if (submitRow) {
-            submitRow.parentNode.insertBefore(editorMount, submitRow);
-        } else {
-            form.appendChild(editorMount);
+        // Если уже есть значение — показываем id
+        if (hiddenInput.value) {
+            preview.textContent = 'Текущий файл ID: ' + hiddenInput.value;
         }
-        return editorMount;
-    }
 
-    function clearEditor() {
-        if (editorMount) editorMount.innerHTML = '';
-        submitHandlers = [];
-    }
+        btn.addEventListener('click', function () {
+            // Открываем медиабиблиотеку в popup (стандартный Django related-popup)
+            var url = '/admin/media_library/mediafile/?_popup=1&_to_field=id';
+            var popup = window.open(url, 'media_popup', 'width=900,height=600,resizable=yes');
+            // Django вызывает window.opener.dismissRelatedLookupPopup при выборе
+            window._mediaPickerCallback = function (id, repr) {
+                hiddenInput.value = id;
+                preview.textContent = 'Выбран файл ID: ' + id + ' (' + repr + ')';
+                popup && popup.close();
+            };
+        });
 
-    function onSubmit(fn) {
-        submitHandlers.push(fn);
+        group.appendChild(preview);
+        group.appendChild(btn);
     }
 
     // -----------------------------------------------------------------------
-    // Редакторы — только для типов где нужен визуальный построитель
-    // (hero и text используют стандартные поля Django, редактор не нужен)
+    // Построитель строк (counters, cards, team, steps, faq, testimonials, chart_pie)
     // -----------------------------------------------------------------------
+    function renderRowBuilder(type, fields, builder) {
+        // Достаём сырое значение items_raw из fields
+        var rawField = fields.find(function (f) { return f.name === builder.field; });
+        var rawValue = rawField ? (rawField.value || '') : '';
 
-    function initCounters() {
-        var field = findFieldInput('items_raw');
-        if (!field) return;
+        var list = el('div', { cls: 'se-list' });
 
-        var list = el('div', { className: 'se-list' });
+        // Парсим текущие строки
+        var lines = rawValue ? rawValue.split('\n').filter(Boolean) : [];
+        if (!lines.length) lines = [''];  // хотя бы одна пустая строка
 
-        function addRow(value, label) {
-            list.appendChild(makeRow([
-                input('Значение', value, 'se-input--sm'),
-                input('Подпись', label),
-            ]));
-        }
-
-        parseLines(field.value, 2).forEach(function (p) {
-            addRow(p[0].trim(), (p[1] || '').trim());
+        lines.forEach(function (line) {
+            var parts = line.split('|');
+            addRow(list, builder, parts);
         });
-        if (!list.children.length) addRow('', '');
 
-        getOrCreateMount().appendChild(
-            wrapEditor('Счётчики / Достижения', list,
-                btn('+ Добавить счётчик', 'se-btn--add', function () { addRow('', ''); }))
-        );
+        var addBtn = el('button', { type: 'button', cls: 'se-btn se-btn--add', text: builder.addLabel });
+        addBtn.addEventListener('click', function () {
+            addRow(list, builder, []);
+        });
+
+        mount.appendChild(list);
+        mount.appendChild(addBtn);
 
         onSubmit(function () {
             var lines = [];
             list.querySelectorAll('.se-row').forEach(function (row) {
-                var inputs = row.querySelectorAll('input[type="text"]');
-                var v = inputs[0].value.trim(), l = inputs[1].value.trim();
-                if (v) lines.push(v + '|' + l);
+                var inputs = row.querySelectorAll('.se-row-input');
+                var vals = Array.from(inputs).map(function (i) {
+                    return (i.tagName === 'TEXTAREA' ? i.value : i.value).trim();
+                });
+                if (vals[0]) lines.push(vals.join('|'));
             });
-            field.value = lines.join('\n');
+            var result = {};
+            result[builder.field] = lines.join('\n');
+            setDataInput(result);
         });
     }
 
-    function initCards() {
-        var field = findFieldInput('items_raw');
-        if (!field) return;
+    function addRow(list, builder, values) {
+        var row = el('div', { cls: 'se-row' });
 
-        var list = el('div', { className: 'se-list' });
+        builder.cols.forEach(function (placeholder, i) {
+            var isLast    = i === builder.cols.length - 1;
+            var useArea   = isLast && builder.lastTextarea;
+            var inp;
+            if (useArea) {
+                inp = el('textarea', { cls: 'se-row-input se-input se-textarea-sm', placeholder: placeholder });
+                inp.value = (values[i] || '').trim();
+            } else {
+                inp = el('input', { type: 'text', cls: 'se-row-input se-input', placeholder: placeholder });
+                inp.value = (values[i] || '').trim();
+            }
+            row.appendChild(inp);
+        });
 
-        function addRow(icon, title, text) {
-            list.appendChild(makeRow([
-                input('Иконка/эмодзи', icon, 'se-input--icon'),
-                input('Заголовок', title),
-                input('Текст', text, 'se-input--wide'),
-            ]));
+        var removeBtn = el('button', { type: 'button', cls: 'se-btn se-btn--remove', html: '&times;' });
+        removeBtn.addEventListener('click', function () {
+            list.removeChild(row);
+        });
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+    }
+
+    // -----------------------------------------------------------------------
+    // Построитель таблицы
+    // -----------------------------------------------------------------------
+    function renderTableBuilder(fields) {
+        var headersField = fields.find(function (f) { return f.name === 'headers_raw'; });
+        var rowsField    = fields.find(function (f) { return f.name === 'rows_raw'; });
+
+        var initHeaders = headersField && headersField.value
+            ? headersField.value.split('|').map(function (h) { return h.trim(); })
+            : [''];
+        var initRows = rowsField && rowsField.value
+            ? rowsField.value.trim().split('\n').map(function (line) {
+                return line.split('|').map(function (c) { return c.trim(); });
+            })
+            : [[]];
+
+        var colCount = initHeaders.length || 1;
+
+        var tableWrap = el('div', { cls: 'se-table-wrap' });
+        var table     = el('table', { cls: 'se-table' });
+        var thead     = el('thead');
+        var tbody     = el('tbody');
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableWrap.appendChild(table);
+        mount.appendChild(tableWrap);
+
+        function renderHead() {
+            thead.innerHTML = '';
+            var tr = el('tr');
+            var ctrlTh = el('th', { cls: 'se-table__ctrl' });
+            tr.appendChild(ctrlTh);
+            for (var i = 0; i < colCount; i++) {
+                (function (ci) {
+                    var th  = el('th');
+                    var inp = el('input', { type: 'text', cls: 'se-input', placeholder: 'Заголовок' });
+                    inp.value = initHeaders[ci] || '';
+                    inp.dataset.col = ci;
+                    inp.dataset.isHeader = '1';
+                    var rmBtn = el('button', { type: 'button', cls: 'se-btn se-btn--remove-col', html: '&times;' });
+                    rmBtn.addEventListener('click', function () { removeCol(ci); });
+                    th.appendChild(inp);
+                    th.appendChild(rmBtn);
+                    tr.appendChild(th);
+                })(i);
+            }
+            var addColTh = el('th');
+            var addColBtn = el('button', { type: 'button', cls: 'se-btn se-btn--add-col', text: '+ столбец' });
+            addColBtn.addEventListener('click', addCol);
+            addColTh.appendChild(addColBtn);
+            tr.appendChild(addColTh);
+            thead.appendChild(tr);
         }
 
-        parseLines(field.value, 3).forEach(function (p) {
-            addRow((p[0]||'').trim(), (p[1]||'').trim(), (p[2]||'').trim());
-        });
-        if (!list.children.length) addRow('', '', '');
-
-        getOrCreateMount().appendChild(
-            wrapEditor('Карточки с преимуществами', list,
-                btn('+ Добавить карточку', 'se-btn--add', function () { addRow('', '', ''); }))
-        );
-
-        onSubmit(function () {
-            var lines = [];
-            list.querySelectorAll('.se-row').forEach(function (row) {
-                var inputs = row.querySelectorAll('input[type="text"]');
-                var i = inputs[0].value.trim(), t = inputs[1].value.trim(), x = inputs[2].value.trim();
-                if (t) lines.push(i + '|' + t + '|' + x);
-            });
-            field.value = lines.join('\n');
-        });
-    }
-
-    function initTeam() {
-        var field = findFieldInput('items_raw');
-        if (!field) return;
-
-        var list = el('div', { className: 'se-list' });
-
-        function addRow(name, position, description) {
-            list.appendChild(makeRow([
-                input('Имя', name),
-                input('Должность', position),
-                input('Описание', description, 'se-input--wide'),
-            ]));
+        function renderBody() {
+            tbody.innerHTML = '';
+            initRows.forEach(function (rowData) { appendRow(rowData); });
         }
 
-        parseLines(field.value, 3).forEach(function (p) {
-            addRow((p[0]||'').trim(), (p[1]||'').trim(), (p[2]||'').trim());
-        });
-        if (!list.children.length) addRow('', '', '');
-
-        getOrCreateMount().appendChild(
-            wrapEditor('Команда', list,
-                btn('+ Добавить участника', 'se-btn--add', function () { addRow('', '', ''); }))
-        );
-
-        onSubmit(function () {
-            var lines = [];
-            list.querySelectorAll('.se-row').forEach(function (row) {
-                var inputs = row.querySelectorAll('input[type="text"]');
-                var n = inputs[0].value.trim(), p = inputs[1].value.trim(), d = inputs[2].value.trim();
-                if (n) lines.push(n + '|' + p + '|' + d);
-            });
-            field.value = lines.join('\n');
-        });
-    }
-
-    function initSteps() {
-        var field = findFieldInput('items_raw');
-        if (!field) return;
-
-        var list = el('div', { className: 'se-list' });
-
-        function addRow(title, description) {
-            list.appendChild(makeRow([
-                input('Заголовок шага', title),
-                input('Описание', description, 'se-input--wide'),
-            ]));
+        function appendRow(rowData) {
+            var tr = el('tr');
+            var ctrlTd = el('td', { cls: 'se-table__ctrl' });
+            var rmBtn  = el('button', { type: 'button', cls: 'se-btn se-btn--remove', html: '&times;' });
+            rmBtn.addEventListener('click', function () { tbody.removeChild(tr); });
+            ctrlTd.appendChild(rmBtn);
+            tr.appendChild(ctrlTd);
+            for (var i = 0; i < colCount; i++) {
+                var td  = el('td');
+                var inp = el('input', { type: 'text', cls: 'se-input' });
+                inp.value = (rowData && rowData[i]) || '';
+                td.appendChild(inp);
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
         }
 
-        parseLines(field.value, 2).forEach(function (p) {
-            addRow((p[0]||'').trim(), (p[1]||'').trim());
-        });
-        if (!list.children.length) addRow('', '');
-
-        getOrCreateMount().appendChild(
-            wrapEditor('Этапы / Нумерованный список', list,
-                btn('+ Добавить шаг', 'se-btn--add', function () { addRow('', ''); }))
-        );
-
-        onSubmit(function () {
-            var lines = [];
-            list.querySelectorAll('.se-row').forEach(function (row) {
-                var inputs = row.querySelectorAll('input[type="text"]');
-                var t = inputs[0].value.trim(), d = inputs[1].value.trim();
-                if (t) lines.push(t + '|' + d);
+        function getHeaders() {
+            return Array.from(thead.querySelectorAll('input[data-is-header]')).map(function (i) { return i.value.trim(); });
+        }
+        function getRows() {
+            return Array.from(tbody.querySelectorAll('tr')).map(function (tr) {
+                return Array.from(tr.querySelectorAll('td:not(.se-table__ctrl) input')).map(function (i) { return i.value.trim(); });
             });
-            field.value = lines.join('\n');
-        });
-    }
-
-    function initFaq() {
-        var field = findFieldInput('items_raw');
-        if (!field) return;
-
-        var list = el('div', { className: 'se-list' });
-
-        function addRow(question, answer) {
-            list.appendChild(makeRow([
-                input('Вопрос', question, 'se-input--wide'),
-                textarea('Ответ', answer),
-            ]));
+        }
+        function addCol() {
+            colCount++;
+            initHeaders = getHeaders(); initHeaders.push('');
+            initRows = getRows();
+            renderHead(); renderBody();
+        }
+        function removeCol(ci) {
+            if (colCount <= 1) return;
+            var h = getHeaders(); h.splice(ci, 1);
+            var r = getRows().map(function (row) { var c = row.slice(); c.splice(ci, 1); return c; });
+            colCount--; initHeaders = h; initRows = r;
+            renderHead(); renderBody();
         }
 
-        parseLines(field.value, 2).forEach(function (p) {
-            addRow((p[0]||'').trim(), (p[1]||'').trim());
-        });
-        if (!list.children.length) addRow('', '');
+        renderHead();
+        renderBody();
 
-        getOrCreateMount().appendChild(
-            wrapEditor('Вопросы и ответы', list,
-                btn('+ Добавить вопрос', 'se-btn--add', function () { addRow('', ''); }))
-        );
+        var addRowBtn = el('button', { type: 'button', cls: 'se-btn se-btn--add', text: '+ Добавить строку' });
+        addRowBtn.addEventListener('click', function () { appendRow([]); });
+        mount.appendChild(addRowBtn);
 
         onSubmit(function () {
-            var lines = [];
-            list.querySelectorAll('.se-row').forEach(function (row) {
-                var q = row.querySelector('input[type="text"]').value.trim();
-                var a = row.querySelector('textarea').value.trim().replace(/\n/g, ' ');
-                if (q) lines.push(q + '|' + a);
-            });
-            field.value = lines.join('\n');
+            setDataInput({ headers_raw: getHeaders().join('|'), rows_raw: getRows().map(function (r) { return r.join('|'); }).join('\n') });
         });
     }
 
-    function initTestimonials() {
-        var field = findFieldInput('items_raw');
-        if (!field) return;
-
-        var list = el('div', { className: 'se-list' });
-
-        function addRow(name, text) {
-            list.appendChild(makeRow([
-                input('Имя', name, 'se-input--sm'),
-                textarea('Текст отзыва', text),
-            ]));
-        }
-
-        parseLines(field.value, 2).forEach(function (p) {
-            addRow((p[0]||'').trim(), (p[1]||'').trim());
-        });
-        if (!list.children.length) addRow('', '');
-
-        getOrCreateMount().appendChild(
-            wrapEditor('Отзывы', list,
-                btn('+ Добавить отзыв', 'se-btn--add', function () { addRow('', ''); }))
-        );
-
-        onSubmit(function () {
-            var lines = [];
-            list.querySelectorAll('.se-row').forEach(function (row) {
-                var n = row.querySelector('input[type="text"]').value.trim();
-                var t = row.querySelector('textarea').value.trim().replace(/\n/g, ' ');
-                if (n) lines.push(n + '|' + t);
-            });
-            field.value = lines.join('\n');
-        });
-    }
-
-    function initChartPie() {
-        var field = findFieldInput('items_raw');
-        if (!field) return;
-
-        var list = el('div', { className: 'se-list' });
-
-        function addRow(label, value) {
-            list.appendChild(makeRow([
-                input('Подпись', label, 'se-input--wide'),
-                input('Значение', value, 'se-input--sm'),
-            ]));
-        }
-
-        parseLines(field.value, 2).forEach(function (p) {
-            addRow((p[0]||'').trim(), (p[1]||'').trim());
-        });
-        if (!list.children.length) addRow('', '');
-
-        getOrCreateMount().appendChild(
-            wrapEditor('Сегменты круговой диаграммы', list,
-                btn('+ Добавить сегмент', 'se-btn--add', function () { addRow('', ''); }))
-        );
-
-        onSubmit(function () {
-            var lines = [];
-            list.querySelectorAll('.se-row').forEach(function (row) {
-                var inputs = row.querySelectorAll('input[type="text"]');
-                var l = inputs[0].value.trim(), v = inputs[1].value.trim();
-                if (l) lines.push(l + '|' + v);
-            });
-            field.value = lines.join('\n');
-        });
-    }
-
+    // -----------------------------------------------------------------------
+    // Построитель полей формы (тип section = 'form')
+    // -----------------------------------------------------------------------
     var FIELD_TYPES = [
         { value: 'text',     label: 'Текст' },
         { value: 'email',    label: 'Email' },
@@ -434,215 +413,160 @@
         { value: 'textarea', label: 'Большой текст' },
     ];
 
-    function initFormSection() {
-        var field = findFieldInput('fields_raw');
-        if (!field) return;
+    function renderFormBuilder(fields) {
+        var rawField = fields.find(function (f) { return f.name === 'fields_raw'; });
+        var rawValue = rawField ? (rawField.value || '') : '';
 
-        var list = el('div', { className: 'se-list' });
+        var list = el('div', { cls: 'se-list' });
 
-        function addRow(name, type, label, required) {
-            var nameInput  = input('Имя поля (латиница)', name, 'se-input--sm');
-            var typeSelect = select(FIELD_TYPES, type || 'text');
-            var labelInput = input('Подпись', label);
-            var reqLabel   = checkbox('Обязательное', required);
-            var row = el('div', { className: 'se-row' });
-            [nameInput, typeSelect, labelInput, reqLabel].forEach(function(f) { row.appendChild(f); });
-            row.appendChild(btn('✕', 'se-btn--remove', function () {
-                row.parentNode && row.parentNode.removeChild(row);
-            }));
-            list.appendChild(row);
-        }
+        var lines = rawValue ? rawValue.split('\n').filter(Boolean) : [];
+        if (!lines.length) lines = [''];
 
-        parseLines(field.value, 4).forEach(function (p) {
-            addRow((p[0]||'').trim(), (p[1]||'text').trim(), (p[2]||'').trim(), (p[3]||'').trim() === 'true');
+        lines.forEach(function (line) {
+            var parts = line.split('|');
+            addFormFieldRow(list, parts[0], parts[1], parts[2], parts[3] === 'true');
         });
-        if (!list.children.length) addRow('', 'text', '', false);
 
-        getOrCreateMount().appendChild(
-            wrapEditor('Поля формы обратной связи', list,
-                btn('+ Добавить поле', 'se-btn--add', function () { addRow('', 'text', '', false); }))
-        );
+        var addBtn = el('button', { type: 'button', cls: 'se-btn se-btn--add', text: '+ Добавить поле' });
+        addBtn.addEventListener('click', function () {
+            addFormFieldRow(list, '', 'text', '', false);
+        });
+
+        mount.appendChild(list);
+        mount.appendChild(addBtn);
 
         onSubmit(function () {
             var lines = [];
             list.querySelectorAll('.se-row').forEach(function (row) {
-                var inputs = row.querySelectorAll('input[type="text"]');
-                var sel    = row.querySelector('select');
-                var cb     = row.querySelector('input[type="checkbox"]');
-                var name   = inputs[0].value.trim();
-                var label  = inputs[1].value.trim();
-                var type   = sel ? sel.value : 'text';
-                var req    = cb && cb.checked ? 'true' : 'false';
-                if (name) lines.push(name + '|' + type + '|' + label + '|' + req);
+                var nameInp  = row.querySelector('.se-form-name');
+                var typeInp  = row.querySelector('.se-form-type');
+                var labelInp = row.querySelector('.se-form-label');
+                var reqInp   = row.querySelector('.se-form-req');
+                var name = nameInp ? nameInp.value.trim() : '';
+                if (name) {
+                    lines.push([
+                        name,
+                        typeInp  ? typeInp.value  : 'text',
+                        labelInp ? labelInp.value.trim() : '',
+                        reqInp   && reqInp.checked ? 'true' : 'false',
+                    ].join('|'));
+                }
             });
-            field.value = lines.join('\n');
+            setDataInput({ fields_raw: lines.join('\n') });
         });
     }
 
-    function initTable() {
-        var headersField = findFieldInput('headers_raw');
-        var rowsField    = findFieldInput('rows_raw');
-        if (!headersField || !rowsField) return;
+    function addFormFieldRow(list, name, type, label, required) {
+        var row = el('div', { cls: 'se-row se-row--form' });
 
-        var initHeaders = headersField.value
-            ? headersField.value.split('|').map(function (h) { return h.trim(); })
-            : [''];
-        var initRows = rowsField.value
-            ? rowsField.value.trim().split('\n').map(function (line) {
-                return line.split('|').map(function (c) { return c.trim(); });
-            })
-            : [[]];
-        var colCount = initHeaders.length || 1;
+        var nameInp = el('input', { type: 'text', cls: 'se-input se-form-name', placeholder: 'Имя (латиница)' });
+        nameInp.value = (name || '').trim();
 
-        var wrapper   = el('div', { className: 'se-editor se-table-editor' });
-        var header    = el('div', { className: 'se-editor__header' });
-        header.appendChild(el('strong', { html: 'Таблица' }));
-        wrapper.appendChild(header);
-
-        var tableWrap = el('div', { className: 'se-table-wrap' });
-        var table     = el('table', { className: 'se-table' });
-        var thead     = el('thead');
-        var tbody     = el('tbody');
-        table.appendChild(thead);
-        table.appendChild(tbody);
-        tableWrap.appendChild(table);
-        wrapper.appendChild(tableWrap);
-
-        function renderHead() {
-            thead.innerHTML = '';
-            var tr = el('tr');
-            tr.appendChild(el('th', { className: 'se-table__ctrl' }));
-            for (var i = 0; i < colCount; i++) {
-                (function (ci) {
-                    var th  = el('th');
-                    var inp = input('Заголовок', initHeaders[ci] || '');
-                    inp.dataset.col = ci; inp.dataset.isHeader = '1';
-                    th.appendChild(inp);
-                    th.appendChild(btn('✕', 'se-btn--remove se-btn--col', function () { removeCol(ci); }));
-                    tr.appendChild(th);
-                })(i);
-            }
-            var addColTh = el('th');
-            addColTh.appendChild(btn('+ столбец', 'se-btn--add-col', addCol));
-            tr.appendChild(addColTh);
-            thead.appendChild(tr);
-        }
-
-        function renderBody() {
-            tbody.innerHTML = '';
-            initRows.forEach(function (rowData) { appendBodyRow(rowData); });
-        }
-
-        function appendBodyRow(rowData) {
-            var tr     = el('tr');
-            var tdCtrl = el('td', { className: 'se-table__ctrl' });
-            tdCtrl.appendChild(btn('✕', 'se-btn--remove', function () { tbody.removeChild(tr); }));
-            tr.appendChild(tdCtrl);
-            for (var i = 0; i < colCount; i++) {
-                var td = el('td');
-                td.appendChild(input('', (rowData && rowData[i]) || ''));
-                tr.appendChild(td);
-            }
-            tbody.appendChild(tr);
-        }
-
-        function getCurrentHeaders() {
-            var r = [];
-            thead.querySelectorAll('input[data-is-header]').forEach(function (inp) { r.push(inp.value.trim()); });
-            return r;
-        }
-
-        function getCurrentRows() {
-            var r = [];
-            tbody.querySelectorAll('tr').forEach(function (tr) {
-                var cells = [];
-                tr.querySelectorAll('td:not(.se-table__ctrl) input').forEach(function (inp) { cells.push(inp.value.trim()); });
-                r.push(cells);
-            });
-            return r;
-        }
-
-        function addCol() {
-            colCount++;
-            initHeaders = getCurrentHeaders(); initHeaders.push('');
-            initRows = getCurrentRows();
-            renderHead(); renderBody();
-        }
-
-        function removeCol(ci) {
-            if (colCount <= 1) return;
-            var headers = getCurrentHeaders(); headers.splice(ci, 1);
-            var rows = getCurrentRows().map(function (row) { var r = row.slice(); r.splice(ci, 1); return r; });
-            colCount--; initHeaders = headers; initRows = rows;
-            renderHead(); renderBody();
-        }
-
-        wrapper.appendChild(btn('+ Добавить строку', 'se-btn--add', function () { appendBodyRow([]); }));
-        renderHead(); renderBody();
-        getOrCreateMount().appendChild(wrapper);
-
-        onSubmit(function () {
-            headersField.value = getCurrentHeaders().join('|');
-            rowsField.value    = getCurrentRows().map(function (r) { return r.join('|'); }).join('\n');
+        var typeSelect = el('select', { cls: 'se-input se-select se-form-type' });
+        FIELD_TYPES.forEach(function (opt) {
+            var o = el('option', { value: opt.value });
+            o.textContent = opt.label;
+            if (opt.value === (type || 'text')) o.selected = true;
+            typeSelect.appendChild(o);
         });
+
+        var labelInp = el('input', { type: 'text', cls: 'se-input se-form-label', placeholder: 'Подпись' });
+        labelInp.value = (label || '').trim();
+
+        var reqLabel = el('label', { cls: 'se-checkbox' });
+        var reqCb    = el('input', { type: 'checkbox', cls: 'se-form-req' });
+        reqCb.checked = !!required;
+        reqLabel.appendChild(reqCb);
+        reqLabel.appendChild(document.createTextNode(' Обяз.'));
+
+        var rmBtn = el('button', { type: 'button', cls: 'se-btn se-btn--remove', html: '&times;' });
+        rmBtn.addEventListener('click', function () { list.removeChild(row); });
+
+        [nameInp, typeSelect, labelInp, reqLabel, rmBtn].forEach(function (n) { row.appendChild(n); });
+        list.appendChild(row);
     }
 
     // -----------------------------------------------------------------------
-    // Реестр редакторов (только те типы где нужен визуальный построитель)
+    // Сброс данных в скрытый input перед сабмитом
     // -----------------------------------------------------------------------
-
-    var EDITORS = {
-        'counters':     initCounters,
-        'cards':        initCards,
-        'team':         initTeam,
-        'steps':        initSteps,
-        'faq':          initFaq,
-        'testimonials': initTestimonials,
-        'chart_pie':    initChartPie,
-        'form':         initFormSection,
-        'table':        initTable,
-    };
-
-    // -----------------------------------------------------------------------
-    // Запуск редактора для типа
-    // -----------------------------------------------------------------------
-
-    function runEditor(type) {
-        clearEditor();
-        applyFieldVisibility(type);
-        var initFn = EDITORS[type];
-        if (initFn) initFn();
+    function setDataInput(obj) {
+        if (dataInput) dataInput.value = JSON.stringify(obj);
     }
 
     // -----------------------------------------------------------------------
-    // Привязка submit один раз
+    // Очередь колбэков сабмита
     // -----------------------------------------------------------------------
+    var submitHandlers = [];
 
-    function bindSubmit() {
-        var form = document.querySelector('form#section_form') || document.querySelector('#content-main form');
-        if (!form || form._seBound) return;
-        form._seBound = true;
-        form.addEventListener('submit', function () {
-            submitHandlers.forEach(function (fn) { fn(); });
-        });
+    function onSubmit(fn) {
+        submitHandlers.push(fn);
+    }
+
+    function clearSubmitHandlers() {
+        submitHandlers = [];
     }
 
     // -----------------------------------------------------------------------
     // Init
     // -----------------------------------------------------------------------
-
     document.addEventListener('DOMContentLoaded', function () {
-        var typeSelect = document.querySelector('select[name="type"]');
+        typeSelect = document.querySelector('select[name="type"]');
+
         if (!typeSelect) return;  // не на форме секции
 
-        bindSubmit();
+        // Ищем скрытое поле section_data — Unfold может рендерить его по-разному
+        dataInput = document.getElementById('section-data-input')
+                 || document.querySelector('input[name="section_data"]');
 
-        // Начальный рендер
-        runEditor(typeSelect.value);
+        // Если поле не нашли в DOM — создаём сами и добавляем в форму
+        if (!dataInput) {
+            var form = document.querySelector('#content-main form');
+            if (!form) return;
+            dataInput = document.createElement('input');
+            dataInput.type = 'hidden';
+            dataInput.name = 'section_data';
+            dataInput.id   = 'section-data-input';
+            form.appendChild(dataInput);
+        }
 
-        // Смена типа в дропдауне
+        // Определяем pk секции (если редактируем, а не создаём)
+        var match = window.location.pathname.match(/\/pages\/section\/(\d+)\/change\//);
+        sectionId = match ? match[1] : null;
+
+        // Создаём контейнер редактора.
+        // Unfold рендерит форму внутри #content > fieldset-ов.
+        // Вставляем mount в конец #content — прямо после последнего fieldset,
+        // внутри того же flex-контейнера что и поля формы.
+        mount = el('div', { cls: 'se-mount' });
+        var contentDiv = document.getElementById('content');
+        if (contentDiv) {
+            contentDiv.appendChild(mount);
+        } else {
+            // Запасной вариант — после последнего fieldset
+            var fieldsets = document.querySelectorAll('fieldset');
+            var lastFieldset = fieldsets[fieldsets.length - 1];
+            if (lastFieldset && lastFieldset.parentNode) {
+                lastFieldset.parentNode.insertBefore(mount, lastFieldset.nextSibling);
+            } else {
+                document.getElementById('content-main').appendChild(mount);
+            }
+        }
+
+        // Привязываем сабмит формы
+        var form = document.querySelector('#content-main form');
+        if (form) {
+            form.addEventListener('submit', function () {
+                submitHandlers.forEach(function (fn) { fn(); });
+            });
+        }
+
+        // Начальная загрузка
+        loadFields(typeSelect.value);
+
+        // Реагируем на смену типа
         typeSelect.addEventListener('change', function () {
-            runEditor(this.value);
+            clearSubmitHandlers();
+            loadFields(this.value);
         });
     });
 

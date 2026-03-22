@@ -1,6 +1,7 @@
 from django.db import models
 from slugify import slugify
 
+
 # Допустимые типы страниц
 class PageType(models.TextChoices):
     DEFAULT  = 'default',   'Обычная страница'
@@ -30,16 +31,35 @@ class Page(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        # Автоматическая генерация slug из заголовка при первом сохранении
         if not self.slug:
             self.slug = slugify(self.title)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
         return f'/{self.slug}/'
-    
+
+
+# Словарь эмодзи-иконок для каждого типа секции.
+# Единственное место в проекте где они определяются —
+# используется в admin, шаблонах и JS через data-атрибут.
+SECTION_ICONS = {
+    'hero':         '🖼️',
+    'text':         '📝',
+    'counters':     '🔢',
+    'cards':        '🃏',
+    'team':         '👥',
+    'steps':        '👣',
+    'table':        '📊',
+    'chart_pie':    '🥧',
+    'form':         '📬',
+    'faq':          '❓',
+    'testimonials': '💬',
+    'contacts':     '📍',
+}
+
+
 class Section(models.Model):
-    # Все допустимые типы секций
+
     class SectionType(models.TextChoices):
         HERO         = 'hero',         'Обложка (Hero)'
         TEXT         = 'text',         'Текстовый блок'
@@ -52,7 +72,7 @@ class Section(models.Model):
         FORM         = 'form',         'Форма обратной связи'
         FAQ          = 'faq',          'Вопросы и ответы'
         TESTIMONIALS = 'testimonials', 'Отзывы'
-        CONTACTS = 'contacts', 'Контактная информация'
+        CONTACTS     = 'contacts',     'Контактная информация'
 
     page       = models.ForeignKey(Page, on_delete=models.CASCADE,
                                    related_name='sections', verbose_name='Страница')
@@ -61,7 +81,6 @@ class Section(models.Model):
     title      = models.CharField('Заголовок секции', max_length=200, blank=True)
     order      = models.PositiveIntegerField('Порядок', default=0)
     is_visible = models.BooleanField('Видима', default=True)
-    # Все данные секции хранятся в JSON — структура зависит от типа
     data       = models.JSONField('Данные', default=dict, blank=True)
 
     class Meta:
@@ -70,4 +89,8 @@ class Section(models.Model):
         ordering            = ['order']
 
     def __str__(self):
-        return f'{self.get_type_display()} — {self.page.title}'
+        return f'{self.icon()} {self.get_type_display()} — {self.page.title}'
+
+    def icon(self):
+        """Возвращает эмодзи-иконку для типа секции."""
+        return SECTION_ICONS.get(self.type, '📄')
