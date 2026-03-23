@@ -3,24 +3,83 @@
         {% if section.title %}
             <h2 class="section__title">{{ section.title }}</h2>
         {% endif %}
-        <form method="post" action="/leads/submit/{{ section.id }}/">
+        {% if data.description %}
+            <p class="section-form__desc">{{ data.description }}</p>
+        {% endif %}
+
+        <form class="section-form__form"
+              data-section="{{ section.pk }}"
+              data-success="{{ data.success_message|default:'Спасибо! Мы свяжемся с вами.' }}">
             {% csrf_token %}
             {% for field in data.fields %}
                 <div class="form-field">
-                    <label>
+                    <label class="form-label">
                         {{ field.label }}
-                        {% if field.required %}<span>*</span>{% endif %}
+                        {% if field.required %}<span class="form-required">*</span>{% endif %}
                     </label>
                     {% if field.type == 'textarea' %}
-                        <textarea name="{{ field.name }}"
-                            {% if field.required %}required{% endif %}></textarea>
+                        <textarea class="form-input form-textarea"
+                                  name="{{ field.name }}"
+                                  {% if field.required %}required{% endif %}></textarea>
                     {% else %}
-                        <input type="{{ field.type }}" name="{{ field.name }}"
-                            {% if field.required %}required{% endif %}>
+                        <input class="form-input"
+                               type="{{ field.type }}"
+                               name="{{ field.name }}"
+                               {% if field.required %}required{% endif %}>
                     {% endif %}
                 </div>
             {% endfor %}
-            <button type="submit" class="btn">Отправить</button>
+
+            <button type="submit" class="btn">
+                {{ data.button_text|default:'Отправить' }}
+            </button>
+
+            <div class="form-success" style="display:none;"></div>
+            <div class="form-error" style="display:none;">Произошла ошибка. Попробуйте ещё раз.</div>
         </form>
     </div>
 </section>
+
+<script>
+(function() {
+    var form = document.querySelector('#section-{{ section.pk }} .section-form__form');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var btn         = form.querySelector('button[type="submit"]');
+        var successEl   = form.querySelector('.form-success');
+        var errorEl     = form.querySelector('.form-error');
+        var successMsg  = form.dataset.success;
+        var sectionId   = form.dataset.section;
+
+        btn.disabled    = true;
+        btn.textContent = 'Отправка...';
+        errorEl.style.display = 'none';
+
+        var formData = new FormData(form);
+
+        fetch('/leads/submit/' + sectionId + '/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(function(r) {
+            if (r.ok) {
+                form.reset();
+                successEl.textContent  = successMsg;
+                successEl.style.display = 'block';
+                btn.style.display      = 'none';
+            } else {
+                throw new Error('server error');
+            }
+        })
+        .catch(function() {
+            errorEl.style.display = 'block';
+            btn.disabled          = false;
+            btn.textContent       = '{{ data.button_text|default:"Отправить" }}';
+        });
+    });
+})();
+</script>

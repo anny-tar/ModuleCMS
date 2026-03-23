@@ -3,6 +3,8 @@
         {% if section.title %}
             <h2 class="section__title">{{ section.title }}</h2>
         {% endif %}
-        <div class="section-text__body">{{ data.content|linebreaks }}</div>
+        <div class="section-text__body ql-content">
+            {{ data.content|safe }}
+        </div>
     </div>
 </section>

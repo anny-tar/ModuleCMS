@@ -1,324 +1,652 @@
+import json
 from django import forms
 from .models import Section
 
 
-class HeroSectionForm(forms.Form):
-    heading     = forms.CharField(label='Заголовок', max_length=200)
-    subheading  = forms.CharField(label='Подзаголовок', max_length=300, required=False)
-    button_text = forms.CharField(label='Текст кнопки', max_length=100, required=False)
-    button_url  = forms.CharField(label='Ссылка кнопки', max_length=200, required=False)
-    # ID файла из медиабиблиотеки — выбирается через JS-пикер
-    image_id    = forms.IntegerField(label='Фоновое изображение (ID)', required=False)
+# ---------------------------------------------------------------------------
+# Базовый класс — все формы секций наследуют от него.
+# Обязательно реализовать: get_schema(), to_data(), from_data()
+# ---------------------------------------------------------------------------
+class BaseSectionForm(forms.Form):
 
-    def to_data(self):
-        d = self.cleaned_data
-        return {
-            'heading':     d.get('heading', ''),
-            'subheading':  d.get('subheading', ''),
-            'button_text': d.get('button_text', ''),
-            'button_url':  d.get('button_url', ''),
-            'image_id':    d.get('image_id') or None,
-        }
+    @staticmethod
+    def get_schema():
+        """Возвращает список полей для JS-редактора."""
+        return []
+
+    def to_data(self, raw):
+        """Из raw POST-словаря → чистый dict для Section.data."""
+        return {}
 
     @staticmethod
     def from_data(data):
-        return {
-            'heading':     data.get('heading', ''),
-            'subheading':  data.get('subheading', ''),
-            'button_text': data.get('button_text', ''),
-            'button_url':  data.get('button_url', ''),
-            'image_id':    data.get('image_id') or '',
-        }
+        """Из Section.data → начальные значения полей."""
+        return {}
 
 
-class TextSectionForm(forms.Form):
-    content = forms.CharField(label='Содержимое', widget=forms.Textarea(attrs={'rows': 6}))
+# ---------------------------------------------------------------------------
+# Текстовый блок (Quill)
+# ---------------------------------------------------------------------------
+class TextSectionForm(BaseSectionForm):
+    # Quill хранит HTML — Django-поле скрытое, JS заполняет его перед сабмитом
+    content = forms.CharField(widget=forms.HiddenInput(), required=False)
 
-    def to_data(self):
-        return {'content': self.cleaned_data.get('content', '')}
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name':       'content',
+                'label':      'Содержимое',
+                'type':       'quill',
+                'required':   False,
+                'help_text':  '',
+                'depends_on': None,
+            }
+        ]
+
+    def to_data(self, raw):
+        return {'content': raw.get('content', '')}
 
     @staticmethod
     def from_data(data):
         return {'content': data.get('content', '')}
 
 
-class CountersSectionForm(forms.Form):
-    items_raw = forms.CharField(
-        label='Счётчики',
-        widget=forms.Textarea(attrs={'rows': 5}),
-        help_text='Каждый с новой строки: значение|подпись\nПример: 150|Проектов',
-        required=False,
-    )
-
-    def to_data(self):
-        items = []
-        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
-            if '|' in line:
-                value, label = line.split('|', 1)
-                items.append({'value': value.strip(), 'label': label.strip()})
-        return {'items': items}
+# ---------------------------------------------------------------------------
+# Заглушки остальных типов — будут реализованы поэтапно
+# ---------------------------------------------------------------------------
+class HeroSectionForm(BaseSectionForm):
 
     @staticmethod
-    def from_data(data):
-        items = data.get('items', [])
-        return {'items_raw': '\n'.join(
-            f"{i.get('value', '')}|{i.get('label', '')}" for i in items
-        )}
+    def get_schema():
+        return [
+            {
+                'name': 'heading', 'label': 'Заголовок', 'type': 'text',
+                'required': True, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'subheading', 'label': 'Подзаголовок', 'type': 'text',
+                'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'align', 'label': 'Выравнивание', 'type': 'select',
+                'options': [
+                    {'value': 'left',   'label': 'По левому краю'},
+                    {'value': 'center', 'label': 'По центру'},
+                    {'value': 'right',  'label': 'По правому краю'},
+                ],
+                'value': 'left', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'buttons', 'label': 'Кнопки', 'type': 'select',
+                'options': [
+                    {'value': 'none', 'label': 'Без кнопок'},
+                    {'value': 'one',  'label': 'Одна кнопка'},
+                    {'value': 'two',  'label': 'Две кнопки'},
+                ],
+                'value': 'none', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'btn1_text', 'label': 'Текст кнопки 1', 'type': 'text',
+                'required': False, 'help_text': '', 
+                'depends_on': {'field': 'buttons', 'value': ['one', 'two']},
+            },
+            {
+                'name': 'btn1_url', 'label': 'Ссылка кнопки 1', 'type': 'text',
+                'required': False, 'help_text': '',
+                'depends_on': {'field': 'buttons', 'value': ['one', 'two']},
+            },
+            {
+                'name': 'btn2_text', 'label': 'Текст кнопки 2', 'type': 'text',
+                'required': False, 'help_text': '',
+                'depends_on': {'field': 'buttons', 'value': ['two']},
+            },
+            {
+                'name': 'btn2_url', 'label': 'Ссылка кнопки 2', 'type': 'text',
+                'required': False, 'help_text': '',
+                'depends_on': {'field': 'buttons', 'value': ['two']},
+            },
+            {
+                'name': 'bg_mode', 'label': 'Фон', 'type': 'select',
+                'options': [
+                    {'value': 'none',         'label': 'Без фото'},
+                    {'value': 'image',        'label': 'Фото'},
+                    {'value': 'image_dark',   'label': 'Фото + тёмный оверлей'},
+                    {'value': 'image_light',  'label': 'Фото + светлый оверлей'},
+                ],
+                'value': 'none', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'image_id', 'label': 'Фоновое изображение', 'type': 'media',
+                'required': False, 'help_text': '',
+                'depends_on': {'field': 'bg_mode', 'value': ['image', 'image_dark', 'image_light']},
+            },
+        ]
 
-
-class CardsSectionForm(forms.Form):
-    items_raw = forms.CharField(
-        label='Карточки',
-        widget=forms.Textarea(attrs={'rows': 6}),
-        help_text='Каждая с новой строки: иконка|заголовок|текст\nПример: ★|Качество|Проверенные материалы',
-        required=False,
-    )
-
-    def to_data(self):
-        items = []
-        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
-            parts = line.split('|', 2)
-            if len(parts) >= 2:
-                items.append({
-                    'icon':  parts[0].strip(),
-                    'title': parts[1].strip(),
-                    'text':  parts[2].strip() if len(parts) > 2 else '',
-                })
-        return {'items': items}
-
-    @staticmethod
-    def from_data(data):
-        items = data.get('items', [])
-        return {'items_raw': '\n'.join(
-            f"{i.get('icon', '')}|{i.get('title', '')}|{i.get('text', '')}"
-            for i in items
-        )}
-
-
-class TeamSectionForm(forms.Form):
-    items_raw = forms.CharField(
-        label='Участники',
-        widget=forms.Textarea(attrs={'rows': 6}),
-        help_text='Каждый с новой строки: имя|должность|описание\nПример: Иван Петров|Директор|Основатель',
-        required=False,
-    )
-
-    def to_data(self):
-        items = []
-        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
-            parts = line.split('|', 2)
-            if parts and parts[0].strip():
-                items.append({
-                    'name':        parts[0].strip(),
-                    'position':    parts[1].strip() if len(parts) > 1 else '',
-                    'description': parts[2].strip() if len(parts) > 2 else '',
-                })
-        return {'items': items}
-
-    @staticmethod
-    def from_data(data):
-        items = data.get('items', [])
-        return {'items_raw': '\n'.join(
-            f"{i.get('name', '')}|{i.get('position', '')}|{i.get('description', '')}"
-            for i in items
-        )}
-
-
-class StepsSectionForm(forms.Form):
-    items_raw = forms.CharField(
-        label='Шаги',
-        widget=forms.Textarea(attrs={'rows': 6}),
-        help_text='Каждый с новой строки: заголовок|описание\nПример: Заявка|Вы оставляете заявку на сайте',
-        required=False,
-    )
-
-    def to_data(self):
-        items = []
-        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
-            parts = line.split('|', 1)
-            if parts and parts[0].strip():
-                items.append({
-                    'title':       parts[0].strip(),
-                    'description': parts[1].strip() if len(parts) > 1 else '',
-                })
-        return {'items': items}
-
-    @staticmethod
-    def from_data(data):
-        items = data.get('items', [])
-        return {'items_raw': '\n'.join(
-            f"{i.get('title', '')}|{i.get('description', '')}"
-            for i in items
-        )}
-
-
-class TableSectionForm(forms.Form):
-    headers_raw = forms.CharField(
-        label='Заголовки столбцов (через |)',
-        help_text='Пример: Услуга|Срок|Цена',
-        required=False,
-    )
-    rows_raw = forms.CharField(
-        label='Строки таблицы',
-        widget=forms.Textarea(attrs={'rows': 8}),
-        help_text='Каждая строка с новой строки, ячейки через |\nПример: Фундамент|14 дней|150 000 ₽',
-        required=False,
-    )
-
-    def to_data(self):
-        headers = [h.strip() for h in self.cleaned_data.get('headers_raw', '').split('|') if h.strip()]
-        rows = []
-        for line in self.cleaned_data.get('rows_raw', '').strip().splitlines():
-            if line.strip():
-                rows.append([cell.strip() for cell in line.split('|')])
-        return {'headers': headers, 'rows': rows}
-
-    @staticmethod
-    def from_data(data):
+    def to_data(self, raw):
         return {
-            'headers_raw': '|'.join(data.get('headers', [])),
-            'rows_raw':    '\n'.join('|'.join(row) for row in data.get('rows', [])),
-        }
-
-
-class ChartPieSectionForm(forms.Form):
-    chart_title = forms.CharField(label='Заголовок диаграммы', required=False)
-    items_raw   = forms.CharField(
-        label='Данные диаграммы',
-        widget=forms.Textarea(attrs={'rows': 5}),
-        help_text='Каждый с новой строки: подпись|значение\nПример: Онлайн|45',
-        required=False,
-    )
-
-    def to_data(self):
-        items = []
-        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
-            if '|' in line:
-                label, value = line.split('|', 1)
-                items.append({'label': label.strip(), 'value': value.strip()})
-        return {'title': self.cleaned_data.get('chart_title', ''), 'items': items}
-
-    @staticmethod
-    def from_data(data):
-        items = data.get('items', [])
-        return {
-            'chart_title': data.get('title', ''),
-            'items_raw':   '\n'.join(
-                f"{i.get('label', '')}|{i.get('value', '')}" for i in items
-            ),
-        }
-
-
-class FormSectionForm(forms.Form):
-    fields_raw = forms.CharField(
-        label='Поля формы',
-        widget=forms.Textarea(attrs={'rows': 6}),
-        help_text='Каждое поле с новой строки: имя|тип|подпись|обязательное\nПример: name|text|Ваше имя|true',
-        required=False,
-    )
-
-    def to_data(self):
-        fields = []
-        for line in self.cleaned_data.get('fields_raw', '').strip().splitlines():
-            parts = line.split('|', 3)
-            if len(parts) == 4:
-                fields.append({
-                    'name':     parts[0].strip(),
-                    'type':     parts[1].strip(),
-                    'label':    parts[2].strip(),
-                    'required': parts[3].strip().lower() == 'true',
-                })
-        return {'fields': fields}
-
-    @staticmethod
-    def from_data(data):
-        fields = data.get('fields', [])
-        return {'fields_raw': '\n'.join(
-            f"{f.get('name', '')}|{f.get('type', '')}|{f.get('label', '')}|{str(f.get('required', False)).lower()}"
-            for f in fields
-        )}
-
-
-class FaqSectionForm(forms.Form):
-    items_raw = forms.CharField(
-        label='Вопросы и ответы',
-        widget=forms.Textarea(attrs={'rows': 6}),
-        help_text='Каждый с новой строки: вопрос|ответ\nПример: Как оставить заявку?|Заполните форму на сайте',
-        required=False,
-    )
-
-    def to_data(self):
-        items = []
-        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
-            if '|' in line:
-                question, answer = line.split('|', 1)
-                items.append({'question': question.strip(), 'answer': answer.strip()})
-        return {'items': items}
-
-    @staticmethod
-    def from_data(data):
-        items = data.get('items', [])
-        return {'items_raw': '\n'.join(
-            f"{i.get('question', '')}|{i.get('answer', '')}" for i in items
-        )}
-
-
-class TestimonialsSectionForm(forms.Form):
-    items_raw = forms.CharField(
-        label='Отзывы',
-        widget=forms.Textarea(attrs={'rows': 5}),
-        help_text='Каждый с новой строки: имя|текст\nПример: Анна К.|Отличная работа, всё в срок!',
-        required=False,
-    )
-
-    def to_data(self):
-        items = []
-        for line in self.cleaned_data.get('items_raw', '').strip().splitlines():
-            if '|' in line:
-                name, text = line.split('|', 1)
-                items.append({'name': name.strip(), 'text': text.strip()})
-        return {'items': items}
-
-    @staticmethod
-    def from_data(data):
-        items = data.get('items', [])
-        return {'items_raw': '\n'.join(
-            f"{i.get('name', '')}|{i.get('text', '')}" for i in items
-        )}
-
-
-class ContactsSectionForm(forms.Form):
-    """Новая секция: контактная информация в произвольном месте страницы."""
-    address   = forms.CharField(label='Адрес', widget=forms.Textarea(attrs={'rows': 2}), required=False)
-    phone     = forms.CharField(label='Телефон', max_length=100, required=False)
-    email     = forms.EmailField(label='Email', required=False)
-    hours     = forms.CharField(label='Режим работы', max_length=200, required=False)
-    map_url   = forms.URLField(label='Ссылка на карту (Google Maps embed)', max_length=500, required=False)
-
-    def to_data(self):
-        d = self.cleaned_data
-        return {
-            'address': d.get('address', ''),
-            'phone':   d.get('phone', ''),
-            'email':   d.get('email', ''),
-            'hours':   d.get('hours', ''),
-            'map_url': d.get('map_url', ''),
+            'heading':    raw.get('heading', ''),
+            'subheading': raw.get('subheading', ''),
+            'align':      raw.get('align', 'left'),
+            'buttons':    raw.get('buttons', 'none'),
+            'btn1_text':  raw.get('btn1_text', ''),
+            'btn1_url':   raw.get('btn1_url', ''),
+            'btn2_text':  raw.get('btn2_text', ''),
+            'btn2_url':   raw.get('btn2_url', ''),
+            'bg_mode':    raw.get('bg_mode', 'none'),
+            'image_id':   raw.get('image_id') or None,
         }
 
     @staticmethod
     def from_data(data):
         return {
-            'address': data.get('address', ''),
-            'phone':   data.get('phone', ''),
-            'email':   data.get('email', ''),
-            'hours':   data.get('hours', ''),
-            'map_url': data.get('map_url', ''),
+            'heading':    data.get('heading', ''),
+            'subheading': data.get('subheading', ''),
+            'align':      data.get('align', 'left'),
+            'buttons':    data.get('buttons', 'none'),
+            'btn1_text':  data.get('btn1_text', ''),
+            'btn1_url':   data.get('btn1_url', ''),
+            'btn2_text':  data.get('btn2_text', ''),
+            'btn2_url':   data.get('btn2_url', ''),
+            'bg_mode':    data.get('bg_mode', 'none'),
+            'image_id':   data.get('image_id') or '',
+        }
+
+class CountersSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name':       'items',
+                'label':      'Счётчики',
+                'type':       'rows',
+                'required':   False,
+                'help_text':  '',
+                'depends_on': None,
+                'row_schema': [
+                    {'name': 'value', 'label': 'Значение', 'type': 'text', 'width': 'sm'},
+                    {'name': 'label', 'label': 'Подпись',  'type': 'text', 'width': 'md'},
+                ],
+            }
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try:
+                items = json.loads(items)
+            except (ValueError, TypeError):
+                items = []
+        return {
+            'items': [
+                {
+                    'value': str(i.get('value', '')),
+                    'label': str(i.get('label', '')),
+                }
+                for i in items if i.get('value')
+            ]
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {'items': data.get('items', [])}
+
+class CardsSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name':       'items',
+                'label':      'Карточки',
+                'type':       'rows',
+                'required':   False,
+                'help_text':  '',
+                'depends_on': None,
+                'row_schema': [
+                    {'name': 'icon',  'label': 'Эмодзи', 'type': 'emoji', 'width': 'sm'},
+                    {'name': 'title', 'label': 'Заголовок', 'type': 'text', 'width': 'md'},
+                    {'name': 'text',  'label': 'Текст', 'type': 'quill', 'width': 'lg'},
+                ],
+            }
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try:
+                items = json.loads(items)
+            except (ValueError, TypeError):
+                items = []
+        return {
+            'items': [
+                {
+                    'icon':  str(i.get('icon',  '')),
+                    'title': str(i.get('title', '')),
+                    'text':  str(i.get('text',  '')),
+                }
+                for i in items if i.get('title')
+            ]
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {'items': data.get('items', [])}
+
+class TeamSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'items', 'label': 'Участники', 'type': 'rows',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'row_schema': [
+                    {'name': 'photo_id',    'label': 'Фото',       'type': 'media',  'width': 'sm'},
+                    {'name': 'name',        'label': 'Имя',        'type': 'text',   'width': 'md'},
+                    {'name': 'position',    'label': 'Должность',  'type': 'text',   'width': 'md'},
+                    {'name': 'description', 'label': 'Описание',   'type': 'quill',  'width': 'lg'},
+                ],
+            }
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try: items = json.loads(items)
+            except: items = []
+        return {
+            'items': [
+                {
+                    'photo_id':    i.get('photo_id') or None,
+                    'name':        str(i.get('name', '')),
+                    'position':    str(i.get('position', '')),
+                    'description': str(i.get('description', '')),
+                }
+                for i in items if i.get('name')
+            ]
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {'items': data.get('items', [])}
+
+class StepsSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'direction', 'label': 'Направление', 'type': 'select',
+                'options': [
+                    {'value': 'vertical',   'label': 'Вертикально'},
+                    {'value': 'horizontal', 'label': 'Горизонтально'},
+                ],
+                'value': 'vertical', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'items', 'label': 'Шаги', 'type': 'rows',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'row_schema': [
+                    {'name': 'icon',        'label': 'Эмодзи',   'type': 'emoji', 'width': 'sm'},
+                    {'name': 'title',       'label': 'Заголовок', 'type': 'text',  'width': 'md'},
+                    {'name': 'description', 'label': 'Описание',  'type': 'quill', 'width': 'lg'},
+                ],
+            },
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try: items = json.loads(items)
+            except: items = []
+        return {
+            'direction': raw.get('direction', 'vertical'),
+            'items': [
+                {
+                    'icon':        str(i.get('icon', '')),
+                    'title':       str(i.get('title', '')),
+                    'description': str(i.get('description', '')),
+                }
+                for i in items if i.get('title')
+            ],
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {
+            'direction': data.get('direction', 'vertical'),
+            'items':     data.get('items', []),
+        }
+
+class TableSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'style', 'label': 'Стиль таблицы', 'type': 'select',
+                'options': [
+                    {'value': 'zebra',      'label': 'Полосатые строки'},
+                    {'value': 'first_col',  'label': 'Первая колонка жирная'},
+                    {'value': 'both',       'label': 'Оба варианта'},
+                    {'value': 'plain',      'label': 'Без стиля'},
+                ],
+                'value': 'zebra', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'table', 'label': 'Таблица', 'type': 'table',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'value': {'headers': [], 'rows': []},
+            },
+        ]
+
+    def to_data(self, raw):
+        table = raw.get('table', {})
+        if isinstance(table, str):
+            try: table = json.loads(table)
+            except: table = {}
+        return {
+            'style':   raw.get('style', 'zebra'),
+            'headers': table.get('headers', []),
+            'rows':    table.get('rows', []),
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {
+            'style': data.get('style', 'zebra'),
+            'table': {
+                'headers': data.get('headers', []),
+                'rows':    data.get('rows', []),
+            },
+        }
+
+class ChartSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'chart_type', 'label': 'Тип диаграммы', 'type': 'select',
+                'options': [
+                    {'value': 'pie',   'label': 'Круговая'},
+                    {'value': 'doughnut', 'label': 'Пончик'},
+                    {'value': 'bar',   'label': 'Столбчатая'},
+                ],
+                'value': 'pie', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'legend_position', 'label': 'Легенда', 'type': 'select',
+                'options': [
+                    {'value': 'bottom', 'label': 'Снизу'},
+                    {'value': 'top',    'label': 'Сверху'},
+                    {'value': 'left',   'label': 'Слева'},
+                    {'value': 'right',  'label': 'Справа'},
+                ],
+                'value': 'bottom', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'color_mode', 'label': 'Цвета', 'type': 'select',
+                'options': [
+                    {'value': 'auto',   'label': 'Авто (системная палитра)'},
+                    {'value': 'custom', 'label': 'Настроить вручную'},
+                ],
+                'value': 'auto', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'items', 'label': 'Данные', 'type': 'rows',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'row_schema': [
+                    {'name': 'label', 'label': 'Подпись', 'type': 'text',  'width': 'md'},
+                    {'name': 'value', 'label': 'Значение', 'type': 'text', 'width': 'sm'},
+                    {'name': 'color', 'label': 'Цвет',    'type': 'color', 'width': 'sm',
+                     'depends_on': {'field': 'color_mode', 'value': ['custom']}},
+                ],
+            },
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try: items = json.loads(items)
+            except: items = []
+        return {
+            'chart_type':      raw.get('chart_type', 'pie'),
+            'legend_position': raw.get('legend_position', 'bottom'),
+            'color_mode':      raw.get('color_mode', 'auto'),
+            'items': [
+                {
+                    'label': str(i.get('label', '')),
+                    'value': str(i.get('value', '')),
+                    'color': str(i.get('color', '')),
+                }
+                for i in items if i.get('label')
+            ],
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {
+            'chart_type':      data.get('chart_type', 'pie'),
+            'legend_position': data.get('legend_position', 'bottom'),
+            'color_mode':      data.get('color_mode', 'auto'),
+            'items':           data.get('items', []),
+        }
+
+class FormSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'description', 'label': 'Описание формы', 'type': 'textarea',
+                'required': False, 'help_text': 'Показывается под заголовком секции',
+                'depends_on': None,
+            },
+            {
+                'name': 'button_text', 'label': 'Текст кнопки', 'type': 'text',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'value': 'Отправить',
+            },
+            {
+                'name': 'success_message', 'label': 'Сообщение после отправки', 'type': 'text',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'value': 'Спасибо! Мы свяжемся с вами.',
+            },
+            {
+                'name': 'fields', 'label': 'Поля формы', 'type': 'form_fields',
+                'required': False, 'help_text': '', 'depends_on': None,
+            },
+        ]
+
+    def to_data(self, raw):
+        fields = raw.get('fields', [])
+        if isinstance(fields, str):
+            try: fields = json.loads(fields)
+            except: fields = []
+        return {
+            'description':    raw.get('description', ''),
+            'button_text':    raw.get('button_text', 'Отправить'),
+            'success_message':raw.get('success_message', 'Спасибо! Мы свяжемся с вами.'),
+            'fields': [
+                {
+                    'name':     str(f.get('name', '')),
+                    'type':     str(f.get('type', 'text')),
+                    'label':    str(f.get('label', '')),
+                    'required': bool(f.get('required', False)),
+                }
+                for f in fields if f.get('name')
+            ],
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {
+            'description':     data.get('description', ''),
+            'button_text':     data.get('button_text', 'Отправить'),
+            'success_message': data.get('success_message', 'Спасибо! Мы свяжемся с вами.'),
+            'fields':          data.get('fields', []),
+        }
+
+class FaqSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'icon_style', 'label': 'Иконка аккордеона', 'type': 'select',
+                'options': [
+                    {'value': 'arrow', 'label': 'Стрелка ▾'},
+                    {'value': 'plus',  'label': 'Плюс / минус +/−'},
+                ],
+                'value': 'arrow', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'items', 'label': 'Вопросы и ответы', 'type': 'rows',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'row_schema': [
+                    {'name': 'question', 'label': 'Вопрос', 'type': 'text',  'width': 'md'},
+                    {'name': 'answer',   'label': 'Ответ',  'type': 'quill', 'width': 'lg'},
+                ],
+            },
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try: items = json.loads(items)
+            except: items = []
+        return {
+            'icon_style': raw.get('icon_style', 'arrow'),
+            'items': [
+                {
+                    'question': str(i.get('question', '')),
+                    'answer':   str(i.get('answer', '')),
+                }
+                for i in items if i.get('question')
+            ],
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {
+            'icon_style': data.get('icon_style', 'arrow'),
+            'items':      data.get('items', []),
+        }
+
+class TestimonialsSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'items', 'label': 'Отзывы', 'type': 'rows',
+                'required': False, 'help_text': '', 'depends_on': None,
+                'row_schema': [
+                    {'name': 'photo_id', 'label': 'Фото',             'type': 'media', 'width': 'sm'},
+                    {'name': 'name',     'label': 'Имя',              'type': 'text',  'width': 'md'},
+                    {'name': 'role',     'label': 'Должность/компания','type': 'text',  'width': 'md'},
+                    {'name': 'text',     'label': 'Текст отзыва',     'type': 'quill', 'width': 'lg'},
+                ],
+            }
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try: items = json.loads(items)
+            except: items = []
+        return {
+            'items': [
+                {
+                    'photo_id': i.get('photo_id') or None,
+                    'name':     str(i.get('name', '')),
+                    'role':     str(i.get('role', '')),
+
+                    'text':     str(i.get('text', '')),
+                }
+                for i in items if i.get('name')
+            ]
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {'items': data.get('items', [])}
+
+class ContactsSectionForm(BaseSectionForm):
+
+    @staticmethod
+    def get_schema():
+        return [
+            {
+                'name': 'layout', 'label': 'Расположение карты', 'type': 'select',
+                'options': [
+                    {'value': 'none',   'label': 'Без карты'},
+                    {'value': 'bottom', 'label': 'Карта снизу'},
+                    {'value': 'top',    'label': 'Карта сверху'},
+                    {'value': 'right',  'label': 'Карта справа'},
+                    {'value': 'left',   'label': 'Карта слева'},
+                ],
+                'value': 'bottom', 'required': False, 'help_text': '', 'depends_on': None,
+            },
+            {
+                'name': 'map_url', 'label': 'Ссылка на карту (Google Maps embed)',
+                'type': 'text', 'required': False,
+                'help_text': 'Вставьте ссылку из Google Maps → Поделиться → Встроить карту',
+                'depends_on': {'field': 'layout', 'value': ['bottom', 'top', 'right', 'left']},
+            },
+            {
+                'name': 'map_label', 'label': 'Заголовок карты',
+                'type': 'text', 'required': False, 'help_text': '',
+                'depends_on': {'field': 'layout', 'value': ['bottom', 'top', 'right', 'left']},
+            },
+            {
+                'name': 'map_description', 'label': 'Описание под картой',
+                'type': 'text', 'required': False, 'help_text': '',
+                'depends_on': {'field': 'layout', 'value': ['bottom', 'top', 'right', 'left']},
+            },
+            {
+                'name': 'items', 'label': 'Контактные данные', 'type': 'contacts_rows',
+                'required': False, 'help_text': '', 'depends_on': None,
+            },
+        ]
+
+    def to_data(self, raw):
+        items = raw.get('items', [])
+        if isinstance(items, str):
+            try: items = json.loads(items)
+            except: items = []
+        return {
+            'layout':          raw.get('layout', 'bottom'),
+            'map_url':         raw.get('map_url', ''),
+            'map_label':       raw.get('map_label', ''),
+            'map_description': raw.get('map_description', ''),
+            'items': [
+                {
+                    'type':        str(i.get('type', 'phone')),
+                    'label':       str(i.get('label', '')),
+                    'value':       str(i.get('value', '')),
+                    'description': str(i.get('description', '')),
+                }
+                for i in items if i.get('value')
+            ],
+        }
+
+    @staticmethod
+    def from_data(data):
+        return {
+            'layout':          data.get('layout', 'bottom'),
+            'map_url':         data.get('map_url', ''),
+            'map_label':       data.get('map_label', ''),
+            'map_description': data.get('map_description', ''),
+            'items':           data.get('items', []),
         }
 
 
 # ---------------------------------------------------------------------------
-# Единый реестр: тип → класс формы.
-# Используется в SectionAdminForm и в AJAX-view section_fields.
+# Реестр: тип секции → класс формы
 # ---------------------------------------------------------------------------
 SECTION_FORM_MAP = {
     'hero':         HeroSectionForm,
@@ -328,7 +656,7 @@ SECTION_FORM_MAP = {
     'team':         TeamSectionForm,
     'steps':        StepsSectionForm,
     'table':        TableSectionForm,
-    'chart_pie':    ChartPieSectionForm,
+    'chart':    ChartSectionForm,
     'form':         FormSectionForm,
     'faq':          FaqSectionForm,
     'testimonials': TestimonialsSectionForm,
@@ -338,14 +666,11 @@ SECTION_FORM_MAP = {
 
 # ---------------------------------------------------------------------------
 # Форма секции для Django admin.
-# Базовые поля (page, type, title, is_visible) — всегда видны.
-# Поля конкретного типа подгружаются через AJAX и рендерятся JS-редактором.
-# При сохранении скрытый <textarea id="section-data-input"> содержит JSON,
-# который мы кладём в obj.data.
+# Содержит только базовые поля + скрытый section_data (JSON).
+# Всё остальное рендерит JS.
 # ---------------------------------------------------------------------------
 class SectionAdminForm(forms.ModelForm):
 
-    # Скрытое поле — JSON с данными секции, заполняется JS перед сабмитом
     section_data = forms.CharField(
         widget=forms.HiddenInput(attrs={'id': 'section-data-input'}),
         required=False,
@@ -356,16 +681,22 @@ class SectionAdminForm(forms.ModelForm):
         fields = ['page', 'type', 'title', 'is_visible', 'section_data']
 
     def save(self, commit=True):
-        import json
         obj = super().save(commit=False)
         raw = self.cleaned_data.get('section_data', '').strip()
+
         if raw:
             try:
-                obj.data = json.loads(raw)
+                raw_dict      = json.loads(raw)
+                form_class    = SECTION_FORM_MAP.get(obj.type)
+                if form_class:
+                    obj.data = form_class().to_data(raw_dict)
+                else:
+                    obj.data = raw_dict
             except (ValueError, TypeError):
                 obj.data = obj.data or {}
         else:
             obj.data = obj.data or {}
+
         if commit:
             obj.save()
         return obj

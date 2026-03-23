@@ -20,14 +20,16 @@
                     {% include 'sections/steps.html' %}
                 {% elif section.type == 'table' %}
                     {% include 'sections/table.html' %}
-                {% elif section.type == 'chart_pie' %}
-                    {% include 'sections/chart_pie.html' %}
+                {% elif section.type == 'chart' %}
+                    {% include 'sections/chart.html' %}
                 {% elif section.type == 'form' %}
                     {% include 'sections/form.html' %}
                 {% elif section.type == 'faq' %}
                     {% include 'sections/faq.html' %}
                 {% elif section.type == 'testimonials' %}
                     {% include 'sections/testimonials.html' %}
+                {% elif section.type == 'contacts' %}
+                    {% include 'sections/contacts.html' %}
                 {% endif %}
             {% endwith %}
         {% endif %}

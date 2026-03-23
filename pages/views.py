@@ -34,18 +34,21 @@ def page_detail(request, slug):
 @staff_member_required
 def section_fields(request):
     """
-    AJAX: возвращает поля формы для выбранного типа секции и текущие данные.
+    AJAX: возвращает схему полей для выбранного типа секции + текущие значения.
 
-    GET /pages/section/fields/?type=hero&section_id=42
+    GET /admin/section-fields/?type=text&section_id=42
 
     Ответ:
     {
         "fields": [
-            {"name": "heading", "label": "Заголовок", "type": "text",
-             "value": "Привет", "required": true, "help_text": ""},
-            ...
+            {
+                "name": "content", "label": "Содержимое",
+                "type": "quill",  "value": "<p>...</p>",
+                "required": false, "help_text": "",
+                "depends_on": null
+            }
         ],
-        "icon": "🖼️"
+        "icon": "📝"
     }
     """
     section_type = request.GET.get('type', '')
@@ -55,52 +58,63 @@ def section_fields(request):
     if not form_class:
         return JsonResponse({'error': 'unknown type'}, status=400)
 
-    # Если редактируем существующую секцию — подставляем текущие данные
-    current_data = {}
+    # Текущие значения если редактируем существующую секцию
+    current_values = {}
     if section_id:
         try:
             section = Section.objects.get(pk=section_id)
             if section.type == section_type and section.data:
-                current_data = form_class.from_data(section.data)
+                current_values = form_class.from_data(section.data)
         except Section.DoesNotExist:
             pass
 
-    # Собираем описание полей для JS
-    fields_info = []
-    for name, field in form_class.base_fields.items():
-        widget     = field.widget
-        field_type = _widget_type(widget)
-        fields_info.append({
-            'name':      name,
-            'label':     str(field.label or name),
-            'type':      field_type,
-            'value':     current_data.get(name, ''),
-            'required':  field.required,
-            'help_text': str(field.help_text or ''),
-        })
+    # Берём схему из get_schema() и подставляем текущие значения
+    schema = form_class.get_schema()
+    for field in schema:
+        name = field.get('name')
+        if name and name in current_values:
+            field['value'] = current_values[name]
+        elif 'value' not in field:
+            field['value'] = ''
 
     return JsonResponse({
-        'fields': fields_info,
+        'fields': schema,
         'icon':   SECTION_ICONS.get(section_type, '📄'),
     })
 
 
-def _widget_type(widget):
-    """Определяет тип input-а по классу виджета Django."""
-    from django import forms as dj_forms
-    if isinstance(widget, dj_forms.Textarea):
-        return 'textarea'
-    if isinstance(widget, dj_forms.HiddenInput):
-        return 'hidden'
-    if isinstance(widget, dj_forms.CheckboxInput):
-        return 'checkbox'
-    if isinstance(widget, dj_forms.NumberInput):
-        return 'number'
-    if isinstance(widget, dj_forms.EmailInput):
-        return 'email'
-    if isinstance(widget, dj_forms.URLInput):
-        return 'url'
-    return 'text'
+@require_GET
+@staff_member_required
+def media_list(request):
+    from media_library.models import MediaFile
+    q         = request.GET.get('q', '').strip()
+    only_type = request.GET.get('type', 'image')
+    qs = MediaFile.objects.filter(media_type=only_type).order_by('-uploaded_at')
+    if q:
+        qs = qs.filter(original_name__icontains=q)
+    qs = qs[:200]
+    items = [{'id': m.pk, 'name': m.original_name, 'url': m.url} for m in qs]
+    return JsonResponse({'items': items})
+
+
+@require_GET
+@staff_member_required
+def media_url(request):
+    """
+    AJAX: возвращает URL медиафайла по ID — для превью без сохранения.
+
+    GET /admin/media-url/?id=42
+    → {"url": "/media/uploads/photo.jpg", "name": "photo.jpg"}
+    """
+    file_id = request.GET.get('id')
+    if not file_id:
+        return JsonResponse({'error': 'no id'}, status=400)
+    try:
+        from media_library.models import MediaFile
+        media = MediaFile.objects.get(pk=file_id)
+        return JsonResponse({'url': media.file.url, 'name': str(media)})
+    except Exception:
+        return JsonResponse({'error': 'not found'}, status=404)
 
 
 @require_POST
@@ -123,8 +137,7 @@ def page_sort(request):
     """Сохраняет новый порядок страниц."""
     try:
         data = json.loads(request.body)
-        ids  = data.get('ids', [])\
-        
+        ids  = data.get('ids', [])
         for index, page_id in enumerate(ids):
             Page.objects.filter(pk=page_id).update(order=index)
         return JsonResponse({'ok': True})
@@ -133,7 +146,7 @@ def page_sort(request):
 
 
 # ---------------------------------------------------------------------------
-# Вспомогательные функции для контекста
+# Вспомогательные функции контекста
 # ---------------------------------------------------------------------------
 
 def _news_context(request, context):

@@ -1,0 +1,116 @@
+<section class="section section--alt section-chart" id="section-{{ section.pk }}">
+    <div class="container">
+        {% if section.title %}
+            <h2 class="section__title">{{ section.title }}</h2>
+        {% endif %}
+        <div class="chart-wrapper">
+            <canvas id="chart-{{ section.pk }}" data-animated="false"></canvas>
+        </div>
+    </div>
+</section>
+
+<script>
+(function() {
+    var data = {{ section.data|safe }};
+    var items = data.items || [];
+    var chartType = data.chart_type || 'pie';
+    var legendPos = data.legend_position || 'bottom';
+    var colorMode = data.color_mode || 'auto';
+
+    // Автопалитра
+    var AUTO_COLORS = [
+        '#7F77DD','#1D9E75','#E8593C','#BA7517','#185FA5',
+        '#639922','#D4537E','#0F6E56','#D85A30','#534AB7'
+    ];
+
+    var labels = items.map(function(i) { return i.label; });
+    var values = items.map(function(i) { return parseFloat(i.value) || 0; });
+    var colors = colorMode === 'custom'
+        ? items.map(function(i) { return i.color || AUTO_COLORS[0]; })
+        : items.map(function(_, idx) { return AUTO_COLORS[idx % AUTO_COLORS.length]; });
+
+    function init() {
+        var ctx = document.getElementById('chart-{{ section.pk }}');
+        if (!ctx || ctx.dataset.animated === 'true') return;
+        ctx.dataset.animated = 'true';
+
+        var isBar = chartType === 'bar';
+        new Chart(ctx, {
+            type: isBar ? 'bar' : chartType,
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: isBar ? colors.map(function(c) { return c + 'cc'; }) : colors,
+                    borderColor: isBar ? colors : '#fff',
+                    borderWidth: isBar ? 0 : 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: !isBar,
+                        position: legendPos,
+                        labels: { padding: 20, font: { size: 13 } }
+                    }
+                },
+                scales: isBar ? {
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                } : {}
+            }
+        });
+    }
+
+    // Запускаем только когда canvas виден в viewport
+    function runWhenVisible() {
+        var canvas = document.getElementById('chart-{{ section.pk }}');
+        if (!canvas) return;
+        var observer = new IntersectionObserver(function(entries) {
+            if (!entries[0].isIntersecting) return;
+            observer.unobserve(canvas);
+            if (window.Chart) {
+                init();
+            } else {
+                window._chartCallbacks = window._chartCallbacks || [];
+                window._chartCallbacks.push(init);
+                loadChartJs();
+            }
+        }, { threshold: 0.3 });
+        observer.observe(canvas);
+    }
+
+    function loadChartJs() {
+        if (window._chartJsLoading) return;
+        window._chartJsLoading = true;
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        s.onload = function() {
+            (window._chartCallbacks || []).forEach(function(fn) { fn(); });
+        };
+        document.head.appendChild(s);
+    }
+
+    // Chart.js — грузим один раз на страницу
+    if (window.Chart) {
+        runWhenVisible();
+    } else if (!window._chartJsLoading) {
+        window._chartJsLoading = true;
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        s.onload = function() {
+            document.querySelectorAll('._chart-pending').forEach(function(fn) { fn(); });
+        };
+        document.head.appendChild(s);
+        window._chartCallbacks = window._chartCallbacks || [];
+        window._chartCallbacks.push(init);
+        s.onload = function() {
+            (window._chartCallbacks || []).forEach(function(fn) { fn(); });
+        };
+        runWhenVisible();
+    } else {
+        runWhenVisible();
+    }
+})();
+</script>

@@ -7,16 +7,24 @@
         <div class="team-grid">
             {% for item in data.items %}
                 <div class="team-card">
-                    {% if item.photo_id %}
-                        {% get_media item.photo_id as photo %}
-                        {% if photo %}
-                            <img src="{{ photo.url }}" alt="{{ item.name }}">
+                    <div class="team-card__photo">
+                        {% if item.photo_id %}
+                            {% get_media item.photo_id as photo %}
+                            {% if photo %}
+                                <img src="{{ photo.url }}" alt="{{ item.name }}">
+                            {% else %}
+                                <div class="team-card__initials">{{ item.name|slice:":1" }}</div>
+                            {% endif %}
+                        {% else %}
+                            <div class="team-card__initials">{{ item.name|slice:":1" }}</div>
                         {% endif %}
+                    </div>
+                    <h3 class="team-card__name">{{ item.name }}</h3>
+                    {% if item.position %}
+                        <p class="team-card__position">{{ item.position }}</p>
                     {% endif %}
-                    <h3>{{ item.name }}</h3>
-                    <p class="position">{{ item.position }}</p>
                     {% if item.description %}
-                        <p>{{ item.description }}</p>
+                        <div class="team-card__desc ql-content">{{ item.description|safe }}</div>
                     {% endif %}
                 </div>
             {% endfor %}

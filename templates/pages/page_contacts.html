@@ -1,56 +1,62 @@
-{% extends 'base.html' %}
-{% block title %}{{ page.seo_title|default:page.title }} — {{ site_settings.site_name }}{% endblock %}
+<section class="section section-contacts" id="section-{{ section.pk }}">
+    <div class="container">
+        {% if section.title %}
+            <h2 class="section__title">{{ section.title }}</h2>
+        {% endif %}
 
-{% block content %}
-<div class="container">
-    <div class="page-header">
-        <h1>{{ page.title }}</h1>
-    </div>
-    <div class="contacts-grid">
-        <div class="contacts-info">
-            {% if settings.contact_address %}
-                <div class="contact-row">
-                    <div>
-                        <div class="contact-row__label">Адрес</div>
-                        <div class="contact-row__value">{{ settings.contact_address }}</div>
-                    </div>
-                </div>
-            {% endif %}
-            {% if settings.contact_phone %}
-                <div class="contact-row">
-                    <div>
-                        <div class="contact-row__label">Телефон</div>
-                        <div class="contact-row__value">
-                            <a href="tel:{{ settings.contact_phone }}">{{ settings.contact_phone }}</a>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-            {% if settings.contact_email %}
-                <div class="contact-row">
-                    <div>
-                        <div class="contact-row__label">Email</div>
-                        <div class="contact-row__value">
-                            <a href="mailto:{{ settings.contact_email }}">{{ settings.contact_email }}</a>
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-            {% if settings.contact_hours %}
-                <div class="contact-row">
-                    <div>
-                        <div class="contact-row__label">Режим работы</div>
-                        <div class="contact-row__value">{{ settings.contact_hours }}</div>
-                    </div>
-                </div>
-            {% endif %}
-        </div>
-        {% if settings.contact_map_url %}
-            <div class="contacts-map">
-                <iframe src="{{ settings.contact_map_url }}"
-                        allowfullscreen loading="lazy"></iframe>
+        {% with layout=data.layout|default:'bottom' %}
+
+        {% if layout == 'top' and data.map_url %}
+            <div class="contacts-map-block">
+                {% if data.map_label %}<h3 class="contacts-map-title">{{ data.map_label }}</h3>{% endif %}
+                <iframe src="{{ data.map_url }}" width="100%" height="380" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                {% if data.map_description %}<p class="contacts-map-desc">{{ data.map_description }}</p>{% endif %}
             </div>
         {% endif %}
+
+        <div class="contacts-layout contacts-layout--{{ layout }}">
+            <div class="contacts-list">
+                {% for item in data.items %}
+                    <div class="contacts-item">
+                        <span class="contacts-item__icon">
+                            {% if item.type == 'phone' %}📞{% elif item.type == 'email' %}✉️{% elif item.type == 'address' %}📍{% elif item.type == 'site' %}🌐{% elif item.type == 'social' %}💬{% elif item.type == 'hours' %}🕐{% else %}📌{% endif %}
+                        </span>
+                        <div class="contacts-item__body">
+                            {% if item.label %}<div class="contacts-item__label">{{ item.label }}</div>{% endif %}
+                            {% if item.type == 'phone' %}
+                                <a class="contacts-item__value" href="tel:{{ item.value }}">{{ item.value }}</a>
+                            {% elif item.type == 'email' %}
+                                <a class="contacts-item__value" href="mailto:{{ item.value }}">{{ item.value }}</a>
+                            {% elif item.type == 'site' or item.type == 'social' %}
+                                <a class="contacts-item__value" href="{{ item.value }}" target="_blank" rel="noopener">{{ item.value }}</a>
+                            {% else %}
+                                <div class="contacts-item__value">{{ item.value }}</div>
+                            {% endif %}
+                            {% if item.description %}<div class="contacts-item__desc">{{ item.description }}</div>{% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% if layout == 'right' or layout == 'left' %}
+                {% if data.map_url %}
+                    <div class="contacts-map-block">
+                        {% if data.map_label %}<h3 class="contacts-map-title">{{ data.map_label }}</h3>{% endif %}
+                        <iframe src="{{ data.map_url }}" width="100%" height="380" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                        {% if data.map_description %}<p class="contacts-map-desc">{{ data.map_description }}</p>{% endif %}
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        {% if layout == 'bottom' and data.map_url %}
+            <div class="contacts-map-block" style="margin-top:2rem;">
+                {% if data.map_label %}<h3 class="contacts-map-title">{{ data.map_label }}</h3>{% endif %}
+                <iframe src="{{ data.map_url }}" width="100%" height="400" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                {% if data.map_description %}<p class="contacts-map-desc">{{ data.map_description }}</p>{% endif %}
+            </div>
+        {% endif %}
+
+        {% endwith %}
     </div>
-</div>
-{% endblock %}
+</section>

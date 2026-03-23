@@ -993,3 +993,512 @@ p { margin-bottom: 0; }
 .nav__logo:hover .nav__logo-text {
     color: var(--color-primary);
 }
+/* ── Quill-контент на фронтенде ── */
+.ql-content .ql-align-center  { text-align: center; }
+.ql-content .ql-align-right   { text-align: right; }
+.ql-content .ql-align-justify { text-align: justify; }
+.ql-content .ql-indent-1 { padding-left: 3em; }
+.ql-content .ql-indent-2 { padding-left: 6em; }
+.ql-content .ql-indent-3 { padding-left: 9em; }
+.ql-content .ql-indent-4 { padding-left: 12em; }
+.ql-content .ql-indent-5 { padding-left: 15em; }
+.ql-content .ql-indent-6 { padding-left: 18em; }
+.ql-content .ql-indent-7 { padding-left: 21em; }
+.ql-content .ql-indent-8 { padding-left: 24em; }
+
+/* ── Team ── */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+}
+
+.team-card {
+    text-align: center;
+    background: var(--color-surface);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.team-card__photo {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto 1rem;
+    background: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.team-card__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.team-card__initials {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+}
+
+.team-card__name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.team-card__position {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.team-card__desc {
+    font-size: 0.875rem;
+    opacity: 0.7;
+    line-height: 1.6;
+}
+
+/* ── Testimonials ── */
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.testimonial-card {
+    background: var(--color-surface);
+    border-radius: 12px;
+    padding: 1.75rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.testimonial-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    opacity: 0.85;
+    flex: 1;
+}
+
+.testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.testimonial-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.testimonial-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.testimonial-initials {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+}
+
+.testimonial-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.testimonial-role {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    margin-top: 1px;
+}
+
+.testimonial-stars {
+    margin-top: 3px;
+}
+
+.star { font-size: 0.9rem; }
+.star--filled { color: #f59e0b; }
+.star--empty  { color: #d1d5db; }
+
+/* ── Table ── */
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.cms-table-front {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 400px;
+}
+
+.cms-table-front th {
+    background: var(--color-primary);
+    color: #fff;
+    padding: 0.875rem 1.25rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.cms-table-front td {
+    padding: 0.75rem 1.25rem;
+    color: var(--color-text);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    vertical-align: top;
+}
+
+.cms-table-front tr:last-child td { border-bottom: none; }
+
+/* Зебра */
+.cms-table-front.table--zebra tr:nth-child(even) td,
+.cms-table-front.table--both tr:nth-child(even) td {
+    background: var(--color-surface);
+}
+
+/* Первая колонка жирная */
+.cms-table-front.table--first_col td:first-child,
+.cms-table-front.table--both td:first-child,
+.cms-table-front td.cell--bold {
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+/* ── Rating в редакторе ── */
+.se-rating {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.se-star {
+    font-size: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #d1d5db;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.1s;
+}
+
+.se-star.active { color: #f59e0b; }
+.se-star:hover  { color: #f59e0b; }
+
+/* ── Media picker в редакторе ── */
+.se-media-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.se-media-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+/* ── Ограничение размера фото в секциях ── */
+.team-card__photo img,
+.team-card__photo {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.testimonial-avatar img,
+.testimonial-avatar {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* ── Form секция ── */
+.section-form__desc {
+    text-align: center;
+    opacity: 0.7;
+    margin-bottom: 2rem;
+    font-size: 1.05rem;
+}
+
+.section-form__form {
+    max-width: 560px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.form-required {
+    color: var(--color-primary);
+    margin-left: 2px;
+}
+
+.form-input {
+    padding: 0.65rem 1rem;
+    border: 1.5px solid rgba(0,0,0,0.12);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: var(--color-background);
+    color: var(--color-text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+    outline: none;
+}
+
+.form-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.form-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-success {
+    padding: 1rem 1.25rem;
+    background: #dcfce7;
+    color: #166534;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.form-error {
+    padding: 0.75rem 1rem;
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 8px;
+    font-size: 0.875rem;
+}
+
+/* ── Contacts секция ── */
+.contacts-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.contacts-layout--right,
+.contacts-layout--left {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+}
+
+.contacts-layout--left .contacts-map-block { order: -1; }
+
+.contacts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.contacts-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--color-surface);
+    border-radius: 10px;
+}
+
+.contacts-item__icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.contacts-item__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-primary);
+    margin-bottom: 2px;
+}
+
+.contacts-item__value {
+    font-size: 1rem;
+    color: var(--color-text);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+a.contacts-item__value:hover {
+    color: var(--color-primary);
+}
+
+.contacts-item__desc {
+    font-size: 0.8rem;
+    opacity: 0.55;
+    margin-top: 2px;
+}
+
+.contacts-map-block iframe {
+    width: 100%;
+    border-radius: 12px;
+    display: block;
+}
+
+.contacts-map-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.contacts-map-desc {
+    font-size: 0.875rem;
+    opacity: 0.65;
+    margin-top: 0.75rem;
+}
+
+/* Иконка типа в редакторе контактов */
+.se-contact-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+    padding-top: 6px;
+}
+
+@media (max-width: 768px) {
+    .contacts-layout--right,
+    .contacts-layout--left {
+        grid-template-columns: 1fr;
+    }
+    .contacts-layout--left .contacts-map-block { order: 0; }
+}
+
+/* contacts-layout--none — без карты, только список */
+.contacts-layout--none {
+    display: block;
+}
+
+/* ── Hero обновлённый ── */
+.section-hero {
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    background: var(--color-surface);
+}
+
+.section-hero__bg-img {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+}
+
+.section-hero__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.section-hero__overlay--dark  { background: rgba(0,0,0,0.55); }
+.section-hero__overlay--light { background: rgba(255,255,255,0.6); }
+
+.section-hero__inner {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 760px;
+}
+
+/* Выравнивание */
+.section-hero--left   .section-hero__inner { align-items: flex-start; text-align: left; margin-left: 0; }
+.section-hero--center .section-hero__inner { align-items: center; text-align: center; margin: 0 auto; }
+.section-hero--right  .section-hero__inner { align-items: flex-end; text-align: right; margin-left: auto; margin-right: 0; }
+
+/* Цвет текста по фону */
+.section-hero--bg-none .section-hero__title,
+.section-hero--bg-image .section-hero__title { color: var(--color-text); }
+.section-hero--bg-image_dark .section-hero__title,
+.section-hero--bg-image_dark .section-hero__sub { color: #fff; }
+.section-hero--bg-image_light .section-hero__title,
+.section-hero--bg-image_light .section-hero__sub { color: #1e293b; }
+
+.section-hero__title {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.15;
+}
+
+.section-hero__sub {
+    font-size: 1.15rem;
+    opacity: 0.8;
+    max-width: 560px;
+}
+
+.section-hero__btns {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn--outline {
+    background: transparent;
+    border: 2px solid currentColor;
+    color: var(--color-primary);
+}
+
+.section-hero--bg-image_dark .btn--outline { color: #fff; border-color: rgba(255,255,255,0.6); }
+
+.btn--outline:hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}

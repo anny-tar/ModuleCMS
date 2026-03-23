@@ -50,7 +50,7 @@ SECTION_ICONS = {
     'team':         '👥',
     'steps':        '👣',
     'table':        '📊',
-    'chart_pie':    '🥧',
+    'chart':    '🥧',
     'form':         '📬',
     'faq':          '❓',
     'testimonials': '💬',
@@ -68,7 +68,7 @@ class Section(models.Model):
         TEAM         = 'team',         'Команда'
         STEPS        = 'steps',        'Этапы / Нумерованный список'
         TABLE        = 'table',        'Таблица'
-        CHART_PIE    = 'chart_pie',    'Круговая диаграмма'
+        CHART    = 'chart',    'Диаграмма'
         FORM         = 'form',         'Форма обратной связи'
         FAQ          = 'faq',          'Вопросы и ответы'
         TESTIMONIALS = 'testimonials', 'Отзывы'

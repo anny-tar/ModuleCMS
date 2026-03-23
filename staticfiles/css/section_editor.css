@@ -325,3 +325,422 @@
     background: #fee2e2;
     color: #dc2626;
 }
+
+/* ============================================================
+   Quill editor
+   ============================================================ */
+
+.se-quill-editor {
+    border-radius: 0 0 8px 8px;
+    min-height: 200px;
+}
+
+/* Переопределяем стили Quill чтобы вписывался в дизайн */
+.se-quill-editor .ql-toolbar {
+    border-radius: 8px 8px 0 0;
+    border-color: #cbd5e1 !important;
+    background: #f8fafc;
+}
+
+.se-quill-editor .ql-container {
+    border-radius: 0 0 8px 8px;
+    border-color: #cbd5e1 !important;
+    font-size: 15px;
+    min-height: 160px;
+}
+
+.se-quill-editor .ql-editor {
+    min-height: 160px;
+    color: #1e293b;
+}
+
+/* Стили Quill-контента на сайте */
+.ql-content h1, .ql-content h2, .ql-content h3 { margin-bottom: 0.75rem; }
+.ql-content p  { margin-bottom: 1rem; }
+.ql-content ul, .ql-content ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+.ql-content li { margin-bottom: 0.25rem; }
+.ql-content blockquote {
+    border-left: 4px solid var(--color-primary);
+    padding-left: 1rem;
+    color: var(--color-text);
+    opacity: 0.75;
+    margin: 1rem 0;
+}
+.ql-content a { color: var(--color-primary); text-decoration: underline; }
+
+/* Выравнивание — Quill добавляет эти классы на теги */
+.ql-content .ql-align-center { text-align: center; }
+.ql-content .ql-align-right  { text-align: right; }
+.ql-content .ql-align-justify { text-align: justify; }
+
+/* Отступы — Quill использует padding-left через inline style,
+   но также добавляет классы ql-indent-1..8 */
+.ql-content .ql-indent-1 { padding-left: 3em; }
+.ql-content .ql-indent-2 { padding-left: 6em; }
+.ql-content .ql-indent-3 { padding-left: 9em; }
+.ql-content .ql-indent-4 { padding-left: 12em; }
+.ql-content .ql-indent-5 { padding-left: 15em; }
+.ql-content .ql-indent-6 { padding-left: 18em; }
+.ql-content .ql-indent-7 { padding-left: 21em; }
+.ql-content .ql-indent-8 { padding-left: 24em; }
+
+/* ============================================================
+   Построитель строк (rows builder)
+   ============================================================ */
+
+.se-rows-builder {
+    margin-top: 1rem;
+}
+
+.se-rows-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+}
+
+.se-rows-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.se-row-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e9eef4;
+    border-radius: 8px;
+    transition: background 0.1s;
+}
+
+.se-row-item:hover { background: #f1f5f9; }
+.se-row-item.dragging { opacity: 0.4; cursor: grabbing; }
+
+.se-row-handle {
+    color: #cbd5e1;
+    font-size: 1.1rem;
+    cursor: grab;
+    user-select: none;
+    padding-top: 22px;
+    flex-shrink: 0;
+}
+
+.se-row-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.se-row-cell--sm  { flex: 0 0 110px; }
+.se-row-cell--md  { flex: 1; }
+.se-row-cell--lg  { flex: 2; }
+
+.se-row-cell-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ============================================================
+   Эмодзи-пикер
+   ============================================================ */
+
+.se-emoji-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.se-emoji-preview {
+    font-size: 22px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+}
+
+.se-emoji-preview::after {
+    content: '▾';
+    position: absolute;
+    bottom: 1px;
+    right: 3px;
+    font-size: 9px;
+    color: #94a3b8;
+    line-height: 1;
+}
+
+.se-emoji-preview:hover {
+    border-color: #7F77DD;
+    box-shadow: 0 0 0 2px rgba(127,119,221,0.15);
+}
+
+.se-emoji-picker {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    width: 280px;
+}
+
+.se-emoji-picker.open { display: block; }
+
+.se-emoji-cats {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.se-emoji-cat-btn {
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.se-emoji-cat-btn.active {
+    background: #EEEDFE;
+    border-color: #7F77DD;
+    color: #3C3489;
+}
+
+.se-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 2px;
+}
+
+.se-emoji-cell {
+    font-size: 18px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.se-emoji-cell:hover { background: #f1f5f9; }
+
+/* Маленький Quill для строк */
+.se-quill-sm .ql-toolbar { padding: 4px 8px; background: #fff; }
+.se-quill-sm .ql-container { min-height: 60px; font-size: 13px; background: #fff; }
+.se-quill-sm .ql-editor { min-height: 60px; padding: 6px 10px; background: #fff; }
+
+/* ============================================================
+   Медиапикер — выпадающий список с поиском
+   ============================================================ */
+
+.se-media-picker-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.se-media-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.se-media-input-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.se-media-search {
+    flex: 1;
+    font-size: 12px;
+    padding: 5px 8px;
+}
+
+.se-media-clear {
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.se-media-clear:hover { background: #fee2e2; color: #dc2626; }
+
+.se-media-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.se-media-dropdown.open { display: block; }
+
+.se-media-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.se-media-item:last-child { border-bottom: none; }
+.se-media-item:hover { background: #f8fafc; }
+.se-media-item.selected { background: #EEEDFE; }
+
+.se-media-item-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 5px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f1f5f9;
+}
+
+.se-media-item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.se-media-item-name {
+    font-size: 12px;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.se-media-empty {
+    padding: 12px;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+/* ============================================================
+   Hero — живое превью
+   ============================================================ */
+
+.se-hero-preview {
+    margin-top: 1.5rem;
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 220px;
+    background: #1e293b;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.se-hero-preview__bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    transition: background-image .3s;
+}
+
+.se-hero-preview__bg--dark  { background-color: rgba(0,0,0,0.55); }
+.se-hero-preview__bg--light { background-color: rgba(255,255,255,0.6); }
+
+.se-hero-preview__inner {
+    position: relative;
+    z-index: 1;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    transition: text-align .2s, align-items .2s;
+}
+
+.se-hero-preview__h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.se-hero-preview__sub {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.75);
+}
+
+.se-hero-preview__btns {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+}
+
+.se-hero-preview__btn {
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.se-hero-preview__btn--primary {
+    background: #7F77DD;
+    color: #fff;
+}
+
+.se-hero-preview__btn--outline {
+    border: 1.5px solid rgba(255,255,255,0.5);
+    color: #fff;
+}

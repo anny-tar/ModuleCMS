@@ -1,3 +1,4 @@
+{% load media_tags %}
 <section class="section section--alt section-testimonials" id="section-{{ section.pk }}">
     <div class="container">
         {% if section.title %}
@@ -6,8 +7,30 @@
         <div class="testimonials-grid">
             {% for item in data.items %}
                 <div class="testimonial-card">
-                    <p class="testimonial-text">{{ item.text }}</p>
-                    <p class="testimonial-author">{{ item.name }}</p>
+                    {% if item.text %}
+                        <div class="testimonial-text ql-content">{{ item.text|safe }}</div>
+                    {% endif %}
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">
+                            {% if item.photo_id %}
+                                {% get_media item.photo_id as photo %}
+                                {% if photo %}
+                                    <img src="{{ photo.url }}" alt="{{ item.name }}">
+                                {% else %}
+                                    <div class="testimonial-initials">{{ item.name|slice:":1" }}</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="testimonial-initials">{{ item.name|slice:":1" }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="testimonial-info">
+                            <div class="testimonial-name">{{ item.name }}</div>
+                            {% if item.role %}
+                                <div class="testimonial-role">{{ item.role }}</div>
+                            {% endif %}
+
+                        </div>
+                    </div>
                 </div>
             {% endfor %}
         </div>

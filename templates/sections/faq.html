@@ -3,20 +3,37 @@
         {% if section.title %}
             <h2 class="section__title">{{ section.title }}</h2>
         {% endif %}
-        <dl class="faq-list">
+        <div class="faq-list faq-list--{{ data.icon_style|default:'arrow' }}">
             {% for item in data.items %}
                 <div class="faq-item">
-                    <dt>{{ item.question }}</dt>
-                    <dd>{{ item.answer }}</dd>
+                    <button class="faq-question" type="button">
+                        <span>{{ item.question }}</span>
+                        <span class="faq-icon"></span>
+                    </button>
+                    <div class="faq-answer ql-content">
+                        {{ item.answer|safe }}
+                    </div>
                 </div>
             {% endfor %}
-        </dl>
+        </div>
     </div>
-    <script>
-        document.querySelectorAll('#section-{{ section.pk }} .faq-item dt').forEach(dt => {
-            dt.addEventListener('click', () => {
-                dt.closest('.faq-item').classList.toggle('open');
-            });
-        });
-    </script>
 </section>
+
+<script>
+(function() {
+    var section = document.getElementById('section-{{ section.pk }}');
+    if (!section) return;
+    section.querySelectorAll('.faq-question').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var item = btn.closest('.faq-item');
+            var isOpen = item.classList.contains('open');
+            // Закрываем все
+            section.querySelectorAll('.faq-item.open').forEach(function(el) {
+                el.classList.remove('open');
+            });
+            // Открываем текущий если был закрыт
+            if (!isOpen) item.classList.add('open');
+        });
+    });
+})();
+</script>

@@ -6,10 +6,58 @@
         <div class="counters-grid">
             {% for item in data.items %}
                 <div class="counter-item">
-                    <span class="counter-value">{{ item.value }}</span>
+                    <span class="counter-value"
+                          data-target="{{ item.value }}"
+                          data-animated="false">{{ item.value }}</span>
                     <span class="counter-label">{{ item.label }}</span>
                 </div>
             {% endfor %}
         </div>
     </div>
 </section>
+
+<script>
+(function() {
+    var section = document.getElementById('section-{{ section.pk }}');
+    if (!section) return;
+
+    function animateCounter(el) {
+        var raw    = el.dataset.target.replace(/[^\d.]/g, '');
+        var target = parseFloat(raw);
+        if (isNaN(target)) return;
+
+        // Сохраняем суффикс (например "+" или "к")
+        var suffix = el.dataset.target.replace(/[\d.]/g, '');
+        var start  = 0;
+        var duration = 1800;
+        var startTime = null;
+
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            var progress = Math.min((timestamp - startTime) / duration, 1);
+            // easeOutQuart
+            var ease = 1 - Math.pow(1 - progress, 4);
+            var current = Math.floor(ease * target);
+            el.textContent = current + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+            else el.textContent = el.dataset.target;
+        }
+
+        requestAnimationFrame(step);
+    }
+
+    // Запускаем анимацию когда секция появляется в viewport
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (!entry.isIntersecting) return;
+            section.querySelectorAll('.counter-value[data-animated="false"]').forEach(function(el) {
+                el.dataset.animated = 'true';
+                animateCounter(el);
+            });
+            observer.unobserve(section);
+        });
+    }, { threshold: 0.3 });
+
+    observer.observe(section);
+})();
+</script>

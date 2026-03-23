@@ -1,18 +1,34 @@
 {% load media_tags %}
-<section class="section section-hero" id="section-{{ section.pk }}">
-    {% if data.image_id %}
+<section class="section section-hero section-hero--{{ data.align|default:'left' }} section-hero--bg-{{ data.bg_mode|default:'none' }}"
+         id="section-{{ section.pk }}">
+
+    {% if data.image_id and data.bg_mode != 'none' %}
         {% get_media data.image_id as hero_image %}
         {% if hero_image %}
-            <img class="section-hero__bg" src="{{ hero_image.url }}" alt="">
+            <div class="section-hero__bg-img" style="background-image: url('{{ hero_image.url }}');"></div>
         {% endif %}
     {% endif %}
+
+    {% if data.bg_mode == 'image_dark' %}
+        <div class="section-hero__overlay section-hero__overlay--dark"></div>
+    {% elif data.bg_mode == 'image_light' %}
+        <div class="section-hero__overlay section-hero__overlay--light"></div>
+    {% endif %}
+
     <div class="section-hero__inner container">
         <h1 class="section-hero__title">{{ data.heading }}</h1>
         {% if data.subheading %}
             <p class="section-hero__sub">{{ data.subheading }}</p>
         {% endif %}
-        {% if data.button_text and data.button_url %}
-            <a href="{{ data.button_url }}" class="btn">{{ data.button_text }}</a>
+        {% if data.buttons != 'none' %}
+            <div class="section-hero__btns">
+                {% if data.btn1_text %}
+                    <a href="{{ data.btn1_url|default:'#' }}" class="btn btn--primary">{{ data.btn1_text }}</a>
+                {% endif %}
+                {% if data.buttons == 'two' and data.btn2_text %}
+                    <a href="{{ data.btn2_url|default:'#' }}" class="btn btn--outline">{{ data.btn2_text }}</a>
+                {% endif %}
+            </div>
         {% endif %}
     </div>
 </section>
