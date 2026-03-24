@@ -4,7 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from config.cms_views import cms_toggle, cms_sort
-from pages.views import section_fields, media_url, media_list
+from pages.views import section_fields, media_url, media_list, section_preview, section_draft_save
 
 
 class HomeRedirectView(RedirectView):
@@ -21,6 +21,8 @@ urlpatterns = [
     path('admin/cms-toggle/', cms_toggle, name='cms_toggle'),
     path('admin/cms-sort/', cms_sort, name='cms_sort'),
     path('admin/section-fields/', section_fields, name='section_fields'),
+    path('admin/section-preview/', section_preview, name='section_preview'),
+    path('admin/section-draft-save/', section_draft_save, name='section_draft_save'),
     path('admin/media-url/', media_url, name='media_url'),
     path('admin/media-list/', media_list, name='media_list'),
     path('admin/', admin.site.urls),

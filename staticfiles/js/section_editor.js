@@ -134,6 +134,7 @@
         var hasRows = fields.some(function(f) { return f.type === 'rows'; });
         if (hasRows) {
             renderRowsBuilder(fields);
+            bindLivePreview(type);
             return;
         }
 
@@ -141,6 +142,7 @@
         var hasTable = fields.some(function(f) { return f.type === 'table'; });
         if (hasTable) {
             renderTableBuilder(fields);
+            bindLivePreview(type);
             return;
         }
 
@@ -148,6 +150,7 @@
         var hasFormFields = fields.some(function(f) { return f.type === 'form_fields'; });
         if (hasFormFields) {
             renderFormFieldsBuilder(fields);
+            bindLivePreview(type);
             return;
         }
 
@@ -155,6 +158,7 @@
         var hasContactsRows = fields.some(function(f) { return f.type === 'contacts_rows'; });
         if (hasContactsRows) {
             renderContactsBuilder(fields);
+            bindLivePreview(type);
             return;
         }
 
@@ -1241,12 +1245,13 @@
         list.appendChild(row);
     }
 
+
     // -----------------------------------------------------------------------
-    // Панель превью
+    // Панель превью (рендер через Django-эндпоинт)
     // -----------------------------------------------------------------------
     var previewPanel  = null;
-    var previewFrame  = null;
     var previewIframe = null;
+    var previewTimer  = null;
 
     function initPreviewPanel() {
         // Оборачиваем mount в flex-контейнер
@@ -1258,15 +1263,15 @@
 
         previewPanel = el('div', { cls: 'se-layout__preview' });
 
-        // Заголовок панели превью с кнопками ширины
+        // Заголовок панели
         var previewHeader = el('div', { cls: 'se-preview-header' });
         var previewTitle  = el('span', { cls: 'se-preview-title', text: 'Превью' });
         previewHeader.appendChild(previewTitle);
 
         // Кнопки ширины
         var widths = [
-            { label: '📱', val: '375px',  title: 'Мобильный' },
-            { label: '💻', val: '768px',  title: 'Планшет' },
+            { label: '📱', val: '375px', title: 'Мобильный' },
+            { label: '💻', val: '768px', title: 'Планшет' },
             { label: '🖥️', val: '100%',  title: 'Десктоп' },
         ];
         var widthBtns = el('div', { cls: 'se-preview-widths' });
@@ -1282,10 +1287,30 @@
         });
         widthBtns.lastChild.classList.add('active');
         previewHeader.appendChild(widthBtns);
+
+        // Кнопка обновления вручную
+        var refreshBtn = el('button', { type: 'button', cls: 'se-preview-refresh-btn', title: 'Обновить превью' });
+        refreshBtn.textContent = '↻';
+        refreshBtn.addEventListener('click', function() { triggerPreviewUpdate(); });
+        previewHeader.appendChild(refreshBtn);
+
+        // Кнопка "Предпросмотр страницы" — только для существующих секций
+        if (sectionId) {
+            var pagePreviewBtn = el('button', { type: 'button', cls: 'se-btn se-preview-page-btn', title: 'Сохранить черновик и открыть страницу целиком' });
+            pagePreviewBtn.textContent = '👁 Страница';
+            pagePreviewBtn.addEventListener('click', function() { saveDraftAndOpenPage(); });
+            previewHeader.appendChild(pagePreviewBtn);
+        }
+
         previewPanel.appendChild(previewHeader);
 
-        // iframe для превью
-        previewFrame = el('div', { cls: 'se-preview-frame' });
+        // Статус-строка (показываем ошибки / "обновляется...")
+        var statusBar = el('div', { cls: 'se-preview-status' });
+        previewPanel.appendChild(statusBar);
+        previewPanel._statusBar = statusBar;
+
+        // iframe
+        var previewFrame = el('div', { cls: 'se-preview-frame' });
         previewIframe = el('iframe', { cls: 'se-preview-iframe', src: 'about:blank' });
         previewIframe.style.width = '100%';
         previewFrame.appendChild(previewIframe);
@@ -1293,430 +1318,217 @@
 
         wrapper.appendChild(settingsCol);
         wrapper.appendChild(previewPanel);
-
     }
 
     // -----------------------------------------------------------------------
-    // Привязка live preview к событиям формы
+    // Привязка live preview к событиям редактора
     // -----------------------------------------------------------------------
     function bindLivePreview(type) {
-        // Начальный рендер
-        updateLivePreview(type);
+        triggerPreviewUpdate();
 
-        // Обновляем при любом изменении внутри mount
         if (mount) {
-            mount.addEventListener('input',  function() { updateLivePreview(type); });
-            mount.addEventListener('change', function() { updateLivePreview(type); });
-            // Для медиапикера — клик с задержкой (загрузка превью асинхронная)
-            mount.addEventListener('click',  function() { setTimeout(function() { updateLivePreview(type); }, 600); });
+            mount.addEventListener('input',  function() { schedulePreviewUpdate(); });
+            mount.addEventListener('change', function() { schedulePreviewUpdate(); });
+            // Для медиапикера — небольшая задержка (загрузка превью асинхронная)
+            mount.addEventListener('click',  function() { setTimeout(schedulePreviewUpdate, 600); });
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Live preview — JS рендер для всех типов секций
-    // -----------------------------------------------------------------------
+    function schedulePreviewUpdate() {
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(triggerPreviewUpdate, 400);
+    }
 
-    // Кэш CSS для iframe превью
-    var _cachedCSS  = null;
-    var _cssLoading = false;
-    var _cssWaiters = [];
-    var previewTimer = null;
+    // -----------------------------------------------------------------------
+    // Собираем данные из формы редактора и отправляем на сервер
+    // -----------------------------------------------------------------------
+    function triggerPreviewUpdate() {
+        if (!previewIframe || !typeSelect) return;
 
-    function getMainCSS(callback) {
-        if (_cachedCSS) { callback(_cachedCSS); return; }
-        _cssWaiters.push(callback);
-        if (_cssLoading) return;
-        _cssLoading = true;
-        // Находим URL main.css
-        var url = '/static/css/main.css';
-        var links = document.querySelectorAll('link[rel="stylesheet"]');
-        for (var i = 0; i < links.length; i++) {
-            if (links[i].href.indexOf('main.css') !== -1) { url = links[i].href; break; }
-        }
-        fetch(url).then(function(r) { return r.text(); }).then(function(css) {
-            _cachedCSS = css;
-            _cssWaiters.forEach(function(fn) { fn(css); });
-            _cssWaiters = [];
-        }).catch(function() {
-            _cachedCSS = '';
-            _cssWaiters.forEach(function(fn) { fn(''); });
-            _cssWaiters = [];
+        var type  = typeSelect.value;
+        var title = (document.querySelector('[name="title"]') || {}).value || '';
+        var data  = collectEditorData();
+
+        setPreviewStatus('loading');
+
+        fetch('/admin/section-preview/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken':  getCsrf(),
+            },
+            body: JSON.stringify({ type: type, title: title, data: data }),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.error) {
+                setPreviewStatus('error', resp.error);
+                return;
+            }
+            setPreviewStatus('ok');
+            injectIntoIframe(resp.html);
+        })
+        .catch(function(err) {
+            setPreviewStatus('error', err.message || 'Ошибка сети');
         });
     }
 
-    // Собираем текущие данные из полей редактора
-    function collectPreviewData(type) {
+    // Вставляем HTML секции в iframe (с основным CSS сайта)
+    function injectIntoIframe(sectionHtml) {
+        // Ищем URL main.css из текущей страницы
+        var cssUrl = '/static/css/main.css';
+        var links  = document.querySelectorAll('link[rel="stylesheet"]');
+        for (var i = 0; i < links.length; i++) {
+            if (links[i].href.indexOf('main.css') !== -1) { cssUrl = links[i].href; break; }
+        }
+
+        var html = '<!DOCTYPE html><html lang="ru"><head>' +
+            '<meta charset="UTF-8">' +
+            '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+            '<link rel="stylesheet" href="' + cssUrl + '">' +
+            '<style>' +
+            ':root{--color-primary:#2563eb;--color-background:#fff;--color-surface:#f8fafc;' +
+            '--color-accent:#1d4ed8;--color-text:#1e293b;--font-main:sans-serif;}' +
+            'body{margin:0;}' +
+            '</style>' +
+            '</head><body>' + sectionHtml + '</body></html>';
+
+        previewIframe.srcdoc = html;
+    }
+
+    // -----------------------------------------------------------------------
+    // Сохранить черновик → открыть страницу целиком в новой вкладке
+    // -----------------------------------------------------------------------
+    function saveDraftAndOpenPage() {
+        if (!sectionId || !typeSelect) return;
+
+        var type  = typeSelect.value;
+        var title = (document.querySelector('[name="title"]') || {}).value || '';
+        var data  = collectEditorData();
+
+        setPreviewStatus('loading');
+
+        fetch('/admin/section-draft-save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken':  getCsrf(),
+            },
+            body: JSON.stringify({ section_id: parseInt(sectionId), type: type, title: title, data: data }),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.error) {
+                setPreviewStatus('error', resp.error);
+                return;
+            }
+            setPreviewStatus('ok');
+            window.open(resp.preview_url, '_blank');
+        })
+        .catch(function(err) {
+            setPreviewStatus('error', err.message || 'Ошибка сети');
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // Собираем текущие данные из всех виджетов редактора
+    // -----------------------------------------------------------------------
+    function collectEditorData() {
         var data = {};
         if (!mount) return data;
 
-        // Простые поля
+        // Обычные поля
         mount.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(function(inp) {
             if (inp.name) data[inp.name] = inp.type === 'checkbox' ? inp.checked : inp.value;
         });
 
-        // Таблица — собираем из Excel-редактора
-        var thead = mount.querySelector('.se-table thead');
-        var tbody = mount.querySelector('.se-table tbody');
-        if (thead && tbody) {
-            data.headers = Array.from(thead.querySelectorAll('input[data-is-header]')).map(function(i){ return i.value.trim(); });
-            data.rows    = Array.from(tbody.querySelectorAll('tr')).map(function(tr) {
-                return Array.from(tr.querySelectorAll('td:not(.se-table__ctrl) input')).map(function(i){ return i.value.trim(); });
-            });
-        }
-
-        // Скрытые поля (media пикер)
+        // Скрытые поля media-пикера
         mount.querySelectorAll('input[type="hidden"][name]').forEach(function(inp) {
             data[inp.name] = inp.value;
         });
 
-        // Quill
+        // Quill-редакторы
         Object.keys(quillInstances).forEach(function(name) {
             data[name] = quillInstances[name].root.innerHTML;
         });
 
-        // Rows — собираем items
+        // Таблица
+        var thead = mount.querySelector('.se-table thead');
+        var tbody = mount.querySelector('.se-table tbody');
+        if (thead && tbody) {
+            data.table = JSON.stringify({
+                headers: Array.from(thead.querySelectorAll('input[data-is-header]')).map(function(i) { return i.value.trim(); }),
+                rows:    Array.from(tbody.querySelectorAll('tr')).map(function(tr) {
+                    return Array.from(tr.querySelectorAll('td:not(.se-table__ctrl) input')).map(function(i) { return i.value.trim(); });
+                }),
+            });
+        }
+
+        // Rows-builder (counters, cards, team, steps, faq, testimonials, chart)
         var rowsList = mount.querySelector('.se-rows-list');
         if (rowsList) {
             var items = [];
             rowsList.querySelectorAll('.se-row-item').forEach(function(row) {
                 var item = {};
-                // emoji
                 var ep = row.querySelector('.se-emoji-preview');
                 if (ep) item.icon = ep.textContent;
-                // все обычные инпуты
                 row.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(inp) {
                     item[inp.name] = inp.value;
                 });
-                // quill в строке
                 if (row._quills) {
-                    Object.keys(row._quills).forEach(function(n) {
-                        item[n] = row._quills[n].root.innerHTML;
-                    });
+                    Object.keys(row._quills).forEach(function(n) { item[n] = row._quills[n].root.innerHTML; });
                 }
-                // media preview
-                var mediaImg = row.querySelector('.se-media-thumb img');
-                var mediaInp = row.querySelector('input[type="hidden"][name]');
-                if (mediaImg && mediaInp) item.photo_url = mediaImg.src;
                 items.push(item);
             });
-            data.items = items;
+            data.items = JSON.stringify(items);
         }
 
-        // contacts_rows
+        // Contacts-builder
         var contactRows = mount.querySelectorAll('.se-contact-row');
         if (contactRows.length) {
             var citems = [];
             contactRows.forEach(function(row) {
                 citems.push({
-                    type:        row.querySelector('.cr-type') ? row.querySelector('.cr-type').value : '',
+                    type:        row.querySelector('.cr-type')  ? row.querySelector('.cr-type').value  : '',
                     label:       row.querySelector('.cr-label') ? row.querySelector('.cr-label').value : '',
                     value:       row.querySelector('.cr-value') ? row.querySelector('.cr-value').value : '',
                     description: row.querySelector('.cr-desc')  ? row.querySelector('.cr-desc').value  : '',
                 });
             });
-            data.items = citems;
+            data.items = JSON.stringify(citems);
         }
 
-        // form fields
+        // Form-fields-builder
         var formRows = mount.querySelectorAll('.se-form-field-row');
         if (formRows.length) {
             var fields = [];
             formRows.forEach(function(row, idx) {
-                var type  = row.querySelector('.ff-type')  ? row.querySelector('.ff-type').value  : 'text';
                 var label = row.querySelector('.ff-label') ? row.querySelector('.ff-label').value : '';
-                if (label) fields.push({ name: 'field_' + (idx+1), type: type, label: label, required: row.querySelector('.ff-req') ? row.querySelector('.ff-req').checked : false });
+                if (label) {
+                    fields.push({
+                        name:     'field_' + (idx + 1),
+                        type:     row.querySelector('.ff-type')  ? row.querySelector('.ff-type').value  : 'text',
+                        label:    label,
+                        required: row.querySelector('.ff-req')   ? row.querySelector('.ff-req').checked : false,
+                    });
+                }
             });
-            data.fields = fields;
+            data.fields = JSON.stringify(fields);
         }
 
         return data;
     }
 
-    // Главная функция обновления превью
-    function updateLivePreview(type) {
-        if (!previewIframe) return;
-        clearTimeout(previewTimer);
-        previewTimer = setTimeout(function() {
-            var data = collectPreviewData(type);
-            var body = renderPreviewHTML(type, data);
-            getMainCSS(function(css) {
-                var html = '<!DOCTYPE html><html lang="ru"><head>' +
-                    '<meta charset="UTF-8">' +
-                    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
-                    '<style>' + css + '</style>' +
-                    '<style>' +
-                    ':root{--color-primary:#2563eb;--color-background:#fff;--color-surface:#f8fafc;' +
-                    '--color-accent:#1d4ed8;--color-text:#1e293b;--font-main:sans-serif;}' +
-                    'body{margin:0;}' +
-                    '.section{padding:2.5rem 0;}' +
-                    '.section-hero{min-height:280px !important;padding:3rem 0;}' +
-                    '.section-hero__title{font-size:1.6rem !important;}' +
-                    '.section__title{margin-bottom:1.5rem;}' +
-                    '.cards-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}' +
-                    '.team-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));}' +
-                    '.testimonials-grid{grid-template-columns:1fr;}' +
-                    '.chart-wrapper{max-width:300px;}' +
-                    '</style>' +
-                    '</head><body>' + body + '</body></html>';
-                previewIframe.srcdoc = html;
-            });
-        }, 200);
-    }
-
-    // Диспетчер рендера по типу
-    function renderPreviewHTML(type, data) {
-        switch(type) {
-            case 'hero':         return renderHeroHTML(data);
-            case 'text':         return renderTextHTML(data);
-            case 'counters':     return renderCountersHTML(data);
-            case 'cards':        return renderCardsHTML(data);
-            case 'team':         return renderTeamHTML(data);
-            case 'steps':        return renderStepsHTML(data);
-            case 'table':        return renderTableHTML(data);
-            case 'chart':        return renderChartHTML(data);
-            case 'form':         return renderFormHTML(data);
-            case 'faq':          return renderFaqHTML(data);
-            case 'testimonials': return renderTestimonialsHTML(data);
-            case 'contacts':     return renderContactsHTML(data);
-            default:             return '<div style="padding:2rem;color:#94a3b8;text-align:center;">Превью недоступно</div>';
-        }
-    }
-
-    // Хелперы
-    function h(str) {
-        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-    function sectionTitle(title) {
-        return title ? '<h2 class="section__title">' + h(title) + '</h2>' : '';
-    }
-    function wrap(cls, inner, title) {
-        return '<section class="section ' + cls + '">' +
-               '<div class="container">' + sectionTitle(title) + inner + '</div></section>';
-    }
-
-    // ── Hero ──
-    function renderHeroHTML(d) {
-        var align  = d.align || 'left';
-        var bgMode = d.bg_mode || 'none';
-        var bgImg  = '';
-        // Получаем URL из превью медиапикера
-        var mediaThumb = mount && mount.querySelector('.se-media-thumb img');
-        if (mediaThumb && bgMode !== 'none') {
-            bgImg = 'background-image:url(' + mediaThumb.src + ');background-size:cover;background-position:center;';
-        }
-        var overlayStyle = bgMode === 'image_dark'  ? 'position:absolute;inset:0;background:rgba(0,0,0,0.55);' :
-                           bgMode === 'image_light' ? 'position:absolute;inset:0;background:rgba(255,255,255,0.6);' : '';
-        var textColor = bgMode === 'image_dark' ? 'color:#fff;' : '';
-        var btns = '';
-        if (d.buttons === 'one' || d.buttons === 'two') {
-            btns += '<a href="#" class="btn" style="align-self:flex-start;">' + h(d.btn1_text || 'Кнопка') + '</a>';
-        }
-        if (d.buttons === 'two') {
-            btns += '<a href="#" class="btn btn--outline" style="align-self:flex-start;">' + h(d.btn2_text || 'Кнопка 2') + '</a>';
-        }
-        return '<section style="min-height:60vh;display:flex;align-items:center;position:relative;overflow:hidden;background:var(--color-surface);' + bgImg + '">' +
-            (overlayStyle ? '<div style="' + overlayStyle + '"></div>' : '') +
-            '<div class="container" style="position:relative;z-index:1;' + textColor + '">' +
-            '<div style="display:flex;flex-direction:column;gap:1.25rem;text-align:' + align + ';align-items:' + (align==='center'?'center':align==='right'?'flex-end':'flex-start') + ';max-width:700px;' + (align==='center'?'margin:0 auto;':'') + '">' +
-            '<h1 style="font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;line-height:1.15;' + textColor + '">' + h(d.heading || 'Заголовок') + '</h1>' +
-            (d.subheading ? '<p style="font-size:1.1rem;opacity:0.8;' + textColor + '">' + h(d.subheading) + '</p>' : '') +
-            (btns ? '<div style="display:flex;gap:1rem;flex-wrap:wrap;">' + btns + '</div>' : '') +
-            '</div></div></section>';
-    }
-
-    // ── Text ──
-    function renderTextHTML(d) {
-        return wrap('section-text', '<div class="section-text__body ql-content">' + (d.content || '<p style="opacity:.4">Введите текст...</p>') + '</div>');
-    }
-
-    // ── Counters ──
-    function renderCountersHTML(d) {
-        var items = d.items || [];
-        if (!items.length) return wrap('section--alt section-counters', '<p style="opacity:.4;text-align:center;">Добавьте счётчики...</p>');
-        var html = '<div class="counters-grid">';
-        items.forEach(function(item) {
-            html += '<div class="counter-item">' +
-                '<span class="counter-value">' + h(item.value || '0') + '</span>' +
-                '<span class="counter-label">' + h(item.label || '') + '</span>' +
-                '</div>';
-        });
-        return wrap('section--alt section-counters', html + '</div>');
-    }
-
-    // ── Cards ──
-    function renderCardsHTML(d) {
-        var items = d.items || [];
-        if (!items.length) return wrap('section-cards', '<p style="opacity:.4;text-align:center;">Добавьте карточки...</p>');
-        var html = '<div class="cards-grid">';
-        items.forEach(function(item) {
-            html += '<div class="card">' +
-                (item.icon ? '<div class="card__icon">' + item.icon + '</div>' : '') +
-                '<h3 class="card__title">' + h(item.title || '') + '</h3>' +
-                '<div class="card__text ql-content">' + (item.text || '') + '</div>' +
-                '</div>';
-        });
-        return wrap('section-cards', html + '</div>');
-    }
-
-    // ── Team ──
-    function renderTeamHTML(d) {
-        var items = d.items || [];
-        if (!items.length) return wrap('section--alt section-team', '<p style="opacity:.4;text-align:center;">Добавьте участников...</p>');
-        var html = '<div class="team-grid">';
-        items.forEach(function(item) {
-            var avatar = item.photo_url
-                ? '<img src="' + item.photo_url + '" alt="" style="width:100%;height:100%;object-fit:cover;">'
-                : '<div class="team-card__initials">' + h((item.name||'?').slice(0,1)) + '</div>';
-            html += '<div class="team-card">' +
-                '<div class="team-card__photo">' + avatar + '</div>' +
-                '<h3 class="team-card__name">' + h(item.name || '') + '</h3>' +
-                (item.position ? '<p class="team-card__position">' + h(item.position) + '</p>' : '') +
-                '</div>';
-        });
-        return wrap('section--alt section-team', html + '</div>');
-    }
-
-    // ── Steps ──
-    function renderStepsHTML(d) {
-        var items = d.items || [];
-        var dir   = d.direction || 'vertical';
-        if (!items.length) return wrap('section-steps', '<p style="opacity:.4;text-align:center;">Добавьте шаги...</p>');
-        var html = '<div class="steps-list steps-list--' + dir + '">';
-        items.forEach(function(item, i) {
-            html += '<div class="step-item">' +
-                '<div class="step-marker">' +
-                (item.icon ? '<span class="step-icon">' + item.icon + '</span>'
-                           : '<span class="step-number">' + (i+1) + '</span>') +
-                '</div>' +
-                '<div class="step-body">' +
-                '<h3 class="step-title">' + h(item.title || '') + '</h3>' +
-                '</div></div>';
-        });
-        return wrap('section-steps', html + '</div>');
-    }
-
-    // ── Table ──
-    function renderTableHTML(d) {
-        var headers = d.headers || [];
-        var rows    = d.rows    || [];
-        var style   = d.style  || 'zebra';
-        if (!headers.length && !rows.length) return wrap('section--alt section-table', '<p style="opacity:.4;text-align:center;">Добавьте данные таблицы...</p>');
-        var html = '<div class="table-scroll"><table class="cms-table-front table--' + style + '">';
-        if (headers.length) {
-            html += '<thead><tr>' + headers.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead>';
-        }
-        html += '<tbody>';
-        rows.forEach(function(row) {
-            html += '<tr>' + row.map(function(cell, i) {
-                var cls = (i === 0 && (style === 'first_col' || style === 'both')) ? ' class="cell--bold"' : '';
-                return '<td' + cls + '>' + h(cell) + '</td>';
-            }).join('') + '</tr>';
-        });
-        return wrap('section--alt section-table', html + '</tbody></table></div>');
-    }
-
-    // ── Chart ──
-    function renderChartHTML(d) {
-        var items   = d.items   || [];
-        var type    = d.chart_type || 'pie';
-        var legend  = d.legend_position || 'bottom';
-        if (!items.length) return wrap('section--alt section-chart', '<p style="opacity:.4;text-align:center;">Добавьте данные...</p>');
-        var labels  = JSON.stringify(items.map(function(i){ return i.label; }));
-        var values  = JSON.stringify(items.map(function(i){ return parseFloat(i.value)||0; }));
-        var AUTO    = ['#7F77DD','#1D9E75','#E8593C','#BA7517','#185FA5','#639922','#D4537E','#0F6E56'];
-        var colors  = JSON.stringify(d.color_mode === 'custom'
-            ? items.map(function(i){ return i.color || '#7F77DD'; })
-            : items.map(function(_,idx){ return AUTO[idx % AUTO.length]; }));
-        return wrap('section--alt section-chart',
-            '<div class="chart-wrapper"><canvas id="pv-chart"></canvas></div>' +
-            '<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>' +
-            '<script>new Chart(document.getElementById("pv-chart"),{type:"' + (type==='bar'?'bar':type) + '",' +
-            'data:{labels:' + labels + ',datasets:[{data:' + values + ',backgroundColor:' + colors + ',borderColor:"#fff",borderWidth:2}]},' +
-            'options:{plugins:{legend:{position:"' + legend + '"}}}});<\/script>');
-    }
-
-    // ── Form ──
-    function renderFormHTML(d) {
-        var fields = d.fields || [];
-        var html = '';
-        if (d.description) html += '<p class="section-form__desc">' + h(d.description) + '</p>';
-        html += '<form class="section-form__form" onsubmit="return false">';
-        fields.forEach(function(f) {
-            html += '<div class="form-field"><label class="form-label">' + h(f.label) +
-                (f.required ? '<span class="form-required">*</span>' : '') + '</label>';
-            if (f.type === 'textarea') {
-                html += '<textarea class="form-input form-textarea" disabled></textarea>';
-            } else {
-                html += '<input class="form-input" type="' + h(f.type) + '" disabled>';
-            }
-            html += '</div>';
-        });
-        html += '<button class="btn" disabled>' + h(d.button_text || 'Отправить') + '</button></form>';
-        return wrap('section--alt section-form', html);
-    }
-
-    // ── FAQ ──
-    function renderFaqHTML(d) {
-        var items = d.items || [];
-        var icon  = d.icon_style || 'arrow';
-        if (!items.length) return wrap('section-faq', '<p style="opacity:.4;text-align:center;">Добавьте вопросы...</p>');
-        var html = '<div class="faq-list faq-list--' + icon + '">';
-        items.forEach(function(item) {
-            html += '<div class="faq-item">' +
-                '<button class="faq-question" type="button"><span>' + h(item.question) + '</span>' +
-                '<span class="faq-icon"></span></button>' +
-                '<div class="faq-answer ql-content" style="display:none;">' + (item.answer || '') + '</div>' +
-                '</div>';
-        });
-        return wrap('section-faq', html + '</div>');
-    }
-
-    // ── Testimonials ──
-    function renderTestimonialsHTML(d) {
-        var items = d.items || [];
-        if (!items.length) return wrap('section--alt section-testimonials', '<p style="opacity:.4;text-align:center;">Добавьте отзывы...</p>');
-        var html = '<div class="testimonials-grid">';
-        items.forEach(function(item) {
-            var avatar = item.photo_url
-                ? '<img src="' + item.photo_url + '" alt="">'
-                : '<div class="testimonial-initials">' + h((item.name||'?').slice(0,1)) + '</div>';
-            html += '<div class="testimonial-card">' +
-                '<div class="testimonial-text ql-content">' + (item.text || '') + '</div>' +
-                '<div class="testimonial-author">' +
-                '<div class="testimonial-avatar">' + avatar + '</div>' +
-                '<div class="testimonial-info">' +
-                '<div class="testimonial-name">' + h(item.name || '') + '</div>' +
-                (item.role ? '<div class="testimonial-role">' + h(item.role) + '</div>' : '') +
-                '</div></div></div>';
-        });
-        return wrap('section--alt section-testimonials', html + '</div>');
-    }
-
-    // ── Contacts ──
-    function renderContactsHTML(d) {
-        var items  = d.items  || [];
-        var layout = d.layout || 'none';
-        var ICONS  = { phone:'📞', email:'✉️', address:'📍', site:'🌐', social:'💬', hours:'🕐' };
-        var list = '<div class="contacts-list">';
-        items.forEach(function(item) {
-            list += '<div class="contacts-item">' +
-                '<span class="contacts-item__icon">' + (ICONS[item.type] || '📌') + '</span>' +
-                '<div class="contacts-item__body">' +
-                (item.label ? '<div class="contacts-item__label">' + h(item.label) + '</div>' : '') +
-                '<div class="contacts-item__value">' + h(item.value) + '</div>' +
-                (item.description ? '<div class="contacts-item__desc">' + h(item.description) + '</div>' : '') +
-                '</div></div>';
-        });
-        list += '</div>';
-        var map = d.map_url && layout !== 'none'
-            ? '<div class="contacts-map-block">' +
-              (d.map_label ? '<h3 class="contacts-map-title">' + h(d.map_label) + '</h3>' : '') +
-              '<iframe src="' + h(d.map_url) + '" width="100%" height="300" style="border:0;" loading="lazy"></iframe>' +
-              '</div>' : '';
-        var inner = layout === 'right' || layout === 'left'
-            ? '<div class="contacts-layout contacts-layout--' + layout + '">' + list + map + '</div>'
-            : '<div class="contacts-layout contacts-layout--' + layout + '">' + (layout === 'top' ? map + list : list + map) + '</div>';
-        return wrap('section-contacts', inner);
+    // -----------------------------------------------------------------------
+    // Статус-строка превью
+    // -----------------------------------------------------------------------
+    function setPreviewStatus(state, message) {
+        if (!previewPanel || !previewPanel._statusBar) return;
+        var bar = previewPanel._statusBar;
+        bar.className = 'se-preview-status se-preview-status--' + state;
+        bar.textContent = state === 'loading' ? 'Обновление...'
+                        : state === 'error'   ? ('Ошибка: ' + (message || ''))
+                        : '';
     }
 
     // -----------------------------------------------------------------------
@@ -1793,18 +1605,7 @@
             });
         }
 
-        // Кнопка обновления превью
-        if (previewPanel) {
-            var refreshBtn = el('button', { type: 'button', cls: 'se-preview-refresh-btn', title: 'Обновить превью' });
-            refreshBtn.textContent = '↻';
-            refreshBtn.addEventListener('click', function() {
-                updateLivePreview(typeSelect ? typeSelect.value : '');
-            });
-            var header = previewPanel.querySelector('.se-preview-header');
-            if (header) header.appendChild(refreshBtn);
-        }
-
-        // Создаём панель превью справа
+        // Создаём панель превью справа (кнопки ↻ и «Страница» внутри неё)
         initPreviewPanel();
 
         // Начальная загрузка

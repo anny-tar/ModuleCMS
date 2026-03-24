@@ -82,6 +82,7 @@ class Section(models.Model):
     order      = models.PositiveIntegerField('Порядок', default=0)
     is_visible = models.BooleanField('Видима', default=True)
     data       = models.JSONField('Данные', default=dict, blank=True)
+    draft_data = models.JSONField('Черновик', null=True, blank=True, default=None)
 
     class Meta:
         verbose_name        = 'Секция'
