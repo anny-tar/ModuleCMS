@@ -1455,13 +1455,24 @@ a.contacts-item__value:hover {
     flex-direction: column;
     gap: 1.5rem;
     width: 100%;
-    max-width: 760px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
 }
 
 /* Выравнивание */
-.section-hero--left   .section-hero__inner { align-items: flex-start; text-align: left; margin-left: 0; }
-.section-hero--center .section-hero__inner { align-items: center; text-align: center; margin: 0 auto; }
-.section-hero--right  .section-hero__inner { align-items: flex-end; text-align: right; margin-left: auto; margin-right: 0; }
+.section-hero--left   .section-hero__inner { align-items: flex-start; text-align: left; }
+.section-hero--center .section-hero__inner { align-items: center; text-align: center; }
+.section-hero--right  .section-hero__inner { align-items: flex-end; text-align: right; }
+
+/* Контент hero — ограничиваем ширину текста */
+.section-hero__title,
+.section-hero__sub,
+.section-hero__btns {
+    max-width: 680px;
+}
+.section-hero--center .section-hero__title,
+.section-hero--center .section-hero__sub { max-width: 100%; }
 
 /* Цвет текста по фону */
 .section-hero--bg-none .section-hero__title,

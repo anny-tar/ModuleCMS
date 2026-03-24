@@ -4,9 +4,35 @@
 {% block extrahead %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'css/section_editor.css' %}">
+<style>
+/* Скрываем "Заголовок секции" для hero — там свой заголовок */
+body.hero-section .field-title {
+    display: none !important;
+}
+</style>
 {% endblock %}
 
 {% block after_field_sets %}
 {{ block.super }}
+<script>
+window.SE_PREVIEW_URL = "{{ preview_url|default:'' }}";
+
+// Скрываем поле title для hero
+(function() {
+    function updateTitleVisibility(type) {
+        var titleField = document.querySelector('.field-title');
+        if (!titleField) return;
+        titleField.style.display = type === 'hero' ? 'none' : '';
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        var sel = document.querySelector('select[name="type"]');
+        if (!sel) return;
+        updateTitleVisibility(sel.value);
+        sel.addEventListener('change', function() {
+            updateTitleVisibility(this.value);
+        });
+    });
+})();
+</script>
 <script src="{% static 'js/section_editor.js' %}"></script>
 {% endblock %}

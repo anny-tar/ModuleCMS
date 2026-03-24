@@ -68,6 +68,16 @@ class SectionAdmin(ModelAdmin):
             initial['page'] = page_id
         return initial
 
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        try:
+            section = Section.objects.get(pk=object_id)
+            page    = section.page
+            extra_context['preview_url'] = f'/{page.slug}/#section-{object_id}'
+        except Section.DoesNotExist:
+            pass
+        return super().change_view(request, object_id, form_url, extra_context)
+
     def save_model(self, request, obj, form, change):
         """При создании секции — ставим order в конец."""
         if not change and obj.page_id:
