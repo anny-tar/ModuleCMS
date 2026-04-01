@@ -2,12 +2,16 @@ from django.db import models
 
 
 class LeadSubmission(models.Model):
-    # Привязка к секции с формой через ID
-    section_id = models.PositiveIntegerField('ID секции формы')
-    data       = models.JSONField('Данные заявки')
-    ip_address = models.GenericIPAddressField('IP адрес', null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_viewed  = models.BooleanField('Просмотрена', default=False)
+    section     = models.ForeignKey(
+                      'pages.Section',
+                      on_delete=models.SET_NULL,
+                      null=True, blank=True,
+                      verbose_name='Секция формы'
+                  )
+    data        = models.JSONField('Данные заявки')
+    ip_address  = models.GenericIPAddressField('IP адрес', null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    is_viewed   = models.BooleanField('Просмотрена', default=False)
 
     class Meta:
         verbose_name        = 'Заявка'

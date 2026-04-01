@@ -22,7 +22,7 @@ def submit_form(request, section_id):
          or request.META.get('REMOTE_ADDR')
 
     LeadSubmission.objects.create(
-        section_id = section_id,
+        section = section,
         data       = submission_data,
         ip_address = ip or None,
     )

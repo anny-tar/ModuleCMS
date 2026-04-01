@@ -1,4 +1,4 @@
-from pages.models import Page
+from .models import Page
 
 
 def navigation(request):

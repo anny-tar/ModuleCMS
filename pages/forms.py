@@ -255,7 +255,8 @@ class TeamSectionForm(BaseSectionForm):
         items = raw.get('items', [])
         if isinstance(items, str):
             try: items = json.loads(items)
-            except: items = []
+            except (ValueError, TypeError):
+                items = []
         return {
             'items': [
                 {
@@ -299,7 +300,8 @@ class StepsSectionForm(BaseSectionForm):
         items = raw.get('items', [])
         if isinstance(items, str):
             try: items = json.loads(items)
-            except: items = []
+            except (ValueError, TypeError):
+                items = []
         return {
             'direction': raw.get('direction', 'vertical'),
             'items': [
@@ -344,7 +346,8 @@ class TableSectionForm(BaseSectionForm):
         table = raw.get('table', {})
         if isinstance(table, str):
             try: table = json.loads(table)
-            except: table = {}
+            except (ValueError, TypeError):
+                table = {}
         return {
             'style':   raw.get('style', 'zebra'),
             'headers': table.get('headers', []),
@@ -409,7 +412,8 @@ class ChartSectionForm(BaseSectionForm):
         items = raw.get('items', [])
         if isinstance(items, str):
             try: items = json.loads(items)
-            except: items = []
+            except (ValueError, TypeError):
+                items = []
         return {
             'chart_type':      raw.get('chart_type', 'pie'),
             'legend_position': raw.get('legend_position', 'bottom'),
@@ -463,7 +467,8 @@ class FormSectionForm(BaseSectionForm):
         fields = raw.get('fields', [])
         if isinstance(fields, str):
             try: fields = json.loads(fields)
-            except: fields = []
+            except (ValueError, TypeError):
+                fields = []
         return {
             'description':    raw.get('description', ''),
             'button_text':    raw.get('button_text', 'Отправить'),
@@ -515,7 +520,8 @@ class FaqSectionForm(BaseSectionForm):
         items = raw.get('items', [])
         if isinstance(items, str):
             try: items = json.loads(items)
-            except: items = []
+            except (ValueError, TypeError):
+                items = []
         return {
             'icon_style': raw.get('icon_style', 'arrow'),
             'items': [
@@ -555,7 +561,8 @@ class TestimonialsSectionForm(BaseSectionForm):
         items = raw.get('items', [])
         if isinstance(items, str):
             try: items = json.loads(items)
-            except: items = []
+            except (ValueError, TypeError):
+                items = []
         return {
             'items': [
                 {
@@ -615,7 +622,8 @@ class ContactsSectionForm(BaseSectionForm):
         items = raw.get('items', [])
         if isinstance(items, str):
             try: items = json.loads(items)
-            except: items = []
+            except (ValueError, TypeError):
+                items = []
         return {
             'layout':          raw.get('layout', 'bottom'),
             'map_url':         raw.get('map_url', ''),
