@@ -42,7 +42,7 @@
 {% endif %}
 
 {% if add_section_url %}
-<div style="margin-top:1rem;">
+<div style="margin-top:1rem;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
     <a href="{{ add_section_url }}"
        style="display:inline-flex;align-items:center;gap:0.4rem;
               background:#2563eb;color:#fff;
@@ -50,6 +50,15 @@
               font-weight:600;font-size:0.875rem;text-decoration:none;">
         ＋ Добавить секцию
     </a>
+    {% if preview_url %}
+    <a href="{{ preview_url }}" target="_blank"
+       style="display:inline-flex;align-items:center;gap:0.4rem;
+              background:#f1f5f9;color:#1e293b;border:1px solid #e2e8f0;
+              padding:0.55rem 1.25rem;border-radius:6px;
+              font-weight:600;font-size:0.875rem;text-decoration:none;">
+        👁 Предпросмотр страницы
+    </a>
+    {% endif %}
 </div>
 {% endif %}
 

@@ -295,9 +295,16 @@
     function createEmojiPicker(onSelect) {
         var wrap = el('div', { cls: 'se-emoji-wrap' });
 
-        // preview — кнопка со стрелкой, отдельная кнопка "Выбрать" убрана
         var preview = el('button', { type: 'button', cls: 'se-emoji-preview', title: 'Выбрать эмодзи' });
-        preview.textContent = '😀';
+        preview.textContent = '—';  // пустое значение по умолчанию
+
+        // Кнопка сброса
+        var clearBtn = el('button', { type: 'button', cls: 'se-emoji-clear', title: 'Убрать эмодзи', html: '&times;' });
+        clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            preview.textContent = '—';
+            if (onSelect) onSelect('');
+        });
 
         var picker = el('div', { cls: 'se-emoji-picker' });
 
@@ -347,6 +354,7 @@
         });
 
         wrap.appendChild(preview);
+        wrap.appendChild(clearBtn);
         wrap.appendChild(picker);
         return { wrap: wrap, preview: preview };
     }
@@ -421,7 +429,7 @@
                     field.row_schema.forEach(function(col) {
                         if (col.type === 'emoji') {
                             var preview = row.querySelector('.se-emoji-preview[data-col="' + col.name + '"]');
-                            item[col.name] = preview ? preview.textContent : '';
+                            item[col.name] = preview ? (preview.textContent === '—' ? '' : preview.textContent) : '';
                         } else if (col.type === 'quill') {
                             var q = row._quills && row._quills[col.name];
                             item[col.name] = q ? q.root.innerHTML : '';
@@ -457,7 +465,8 @@
 
             if (col.type === 'emoji') {
                 var picker = createEmojiPicker(null);
-                if (initValues[col.name]) picker.preview.textContent = initValues[col.name];
+                var initEmoji = initValues[col.name] || '';
+                picker.preview.textContent = initEmoji || '—';
                 picker.preview.dataset.col = col.name;
                 // Обновляем при выборе
                 var origOnSelect = picker.preview;
@@ -1471,7 +1480,7 @@
             rowsList.querySelectorAll('.se-row-item').forEach(function(row) {
                 var item = {};
                 var ep = row.querySelector('.se-emoji-preview');
-                if (ep) item.icon = ep.textContent;
+                if (ep) item.icon = (ep.textContent === '—') ? '' : ep.textContent;
                 row.querySelectorAll('input[name], select[name], textarea[name]').forEach(function(inp) {
                     item[inp.name] = inp.value;
                 });

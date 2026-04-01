@@ -289,7 +289,6 @@ class StepsSectionForm(BaseSectionForm):
                 'name': 'items', 'label': 'Шаги', 'type': 'rows',
                 'required': False, 'help_text': '', 'depends_on': None,
                 'row_schema': [
-                    {'name': 'icon',        'label': 'Эмодзи',   'type': 'emoji', 'width': 'sm'},
                     {'name': 'title',       'label': 'Заголовок', 'type': 'text',  'width': 'md'},
                     {'name': 'description', 'label': 'Описание',  'type': 'quill', 'width': 'lg'},
                 ],
@@ -305,7 +304,6 @@ class StepsSectionForm(BaseSectionForm):
             'direction': raw.get('direction', 'vertical'),
             'items': [
                 {
-                    'icon':        str(i.get('icon', '')),
                     'title':       str(i.get('title', '')),
                     'description': str(i.get('description', '')),
                 }

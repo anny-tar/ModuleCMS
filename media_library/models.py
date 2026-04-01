@@ -58,3 +58,14 @@ class MediaFile(models.Model):
     @property
     def is_image(self):
         return self.media_type == self.MediaType.IMAGE
+    
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+@receiver(post_delete, sender=MediaFile)
+def delete_file_on_record_delete(sender, instance, **kwargs):
+    if instance.file:
+        try:
+            instance.file.delete(save=False)
+        except Exception:
+            pass

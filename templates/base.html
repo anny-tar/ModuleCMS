@@ -50,6 +50,17 @@
 </head>
 <body>
 
+    {% if is_preview %}
+    <div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#7F77DD;color:#fff;
+                text-align:center;font-size:13px;padding:6px 16px;display:flex;align-items:center;
+                justify-content:center;gap:16px;">
+        <span>👁 Режим предпросмотра — изменения не опубликованы</span>
+        <a href="javascript:window.close()"
+           style="color:#fff;opacity:.75;font-size:12px;text-decoration:underline;">Закрыть</a>
+    </div>
+    <div style="height:33px;"></div>
+    {% endif %}
+
     <header>
         <nav class="nav">
             <div class="nav__inner">
@@ -95,7 +106,57 @@
     </main>
 
     <footer class="footer">
-        <p>{{ site_settings.site_name }}</p>
+        <div class="footer__inner container">
+
+            <div class="footer__brand">
+                <span class="footer__name">{{ site_settings.site_name }}</span>
+            </div>
+
+            {% if nav_items %}
+            <nav class="footer__nav">
+                <div class="footer__nav-title">Страницы</div>
+                <ul class="footer__nav-list">
+                    {% for item in nav_items %}
+                        <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+                    {% endfor %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% if site_settings.contact_phone or site_settings.contact_email or site_settings.contact_address or site_settings.contact_hours %}
+            <div class="footer__contacts">
+                <div class="footer__nav-title">Контакты</div>
+                <ul class="footer__contacts-list">
+                    {% if site_settings.contact_phone %}
+                        <li>
+                            <a href="tel:{{ site_settings.contact_phone }}">{{ site_settings.contact_phone }}</a>
+                        </li>
+                    {% endif %}
+                    {% if site_settings.contact_email %}
+                        <li>
+                            <a href="mailto:{{ site_settings.contact_email }}">{{ site_settings.contact_email }}</a>
+                        </li>
+                    {% endif %}
+                    {% if site_settings.contact_address %}
+                        <li>
+                            <span>{{ site_settings.contact_address }}</span>
+                        </li>
+                    {% endif %}
+                    {% if site_settings.contact_hours %}
+                        <li>
+                            <span>{{ site_settings.contact_hours }}</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+
+        </div>
+        <div class="footer__bottom">
+            <div class="container">
+                &copy; {% now "Y" %} {{ site_settings.site_name }}
+            </div>
+        </div>
     </footer>
 
 </body>

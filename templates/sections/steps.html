@@ -6,13 +6,6 @@
         <div class="steps-list steps-list--{{ data.direction|default:'vertical' }}">
             {% for item in data.items %}
                 <div class="step-item">
-                    <div class="step-marker">
-                        {% if item.icon %}
-                            <span class="step-icon">{{ item.icon }}</span>
-                        {% else %}
-                            <span class="step-number">{{ forloop.counter }}</span>
-                        {% endif %}
-                    </div>
                     {% if data.direction == 'horizontal' %}
                         <div class="step-connector"></div>
                     {% endif %}

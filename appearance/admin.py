@@ -117,9 +117,9 @@ class SiteSettingsAdmin(ModelAdmin):
         ('Логотип и навигация', {
             'fields': ['logo', 'favicon', 'nav_mode'],
         }),
-        ('Контактные данные', {
+        ('Контакты для навигационного меню и футера', {
             'fields': ['contact_address', 'contact_phone',
-                       'contact_email', 'contact_hours', 'contact_map_url'],
+                       'contact_email', 'contact_hours'],
         }),
     ]
 

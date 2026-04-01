@@ -5,7 +5,6 @@ from slugify import slugify
 # Допустимые типы страниц
 class PageType(models.TextChoices):
     DEFAULT  = 'default',   'Обычная страница'
-    CONTACTS = 'contacts',  'Контакты'
     NEWS     = 'news_list', 'Новости'
     GALLERY  = 'gallery',   'Галерея'
 

@@ -6,6 +6,10 @@ from django.views.generic import RedirectView
 from config.cms_views import cms_toggle, cms_sort
 from pages.views import section_fields, media_url, media_list, section_preview, section_draft_save
 
+handler404 = 'config.error_views.handler404'
+handler500 = 'config.error_views.handler500'
+handler403 = 'config.error_views.handler403'
+
 
 class HomeRedirectView(RedirectView):
     permanent = False
@@ -31,7 +35,8 @@ urlpatterns = [
     path('', include('gallery.urls')),
     path('', include('leads.urls')),
     path('', include('pages.urls')),
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -14,6 +14,7 @@ class PageAdmin(ModelAdmin):
     list_filter   = ['page_type', 'is_published']
     search_fields = ['title', 'slug']
     ordering      = ['order', 'title']
+    exclude       = ['order']
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
@@ -40,6 +41,7 @@ class PageAdmin(ModelAdmin):
             extra_context['add_section_url'] = (
                 reverse('admin:pages_section_add') + f'?page={object_id}'
             )
+            extra_context['preview_url'] = f'/{page.slug}/?preview=1'
         except Page.DoesNotExist:
             pass
         return super().change_view(request, object_id, form_url, extra_context)

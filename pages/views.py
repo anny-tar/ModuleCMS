@@ -21,7 +21,6 @@ def page_detail(request, slug):
 
     template_map = {
         'default':   'pages/page_default.html',
-        'contacts':  'pages/page_contacts.html',
         'news_list': 'pages/page_news.html',
         'gallery':   'pages/page_gallery.html',
     }
@@ -37,8 +36,6 @@ def page_detail(request, slug):
 
     if page.page_type == 'news_list':
         context = _news_context(request, context)
-    elif page.page_type == 'contacts':
-        context = _contacts_context(context)
     elif page.page_type == 'gallery':
         context = _gallery_context(context)
 
@@ -261,10 +258,4 @@ def _gallery_context(context):
     from gallery.models import Album
     albums = Album.objects.filter(is_published=True)
     context.update({'albums': albums})
-    return context
-
-
-def _contacts_context(context):
-    from appearance.models import SiteSettings
-    context.update({'settings': SiteSettings.get()})
     return context

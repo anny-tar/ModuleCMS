@@ -5,35 +5,11 @@
         {% endif %}
         <div class="faq-list faq-list--{{ data.icon_style|default:'arrow' }}">
             {% for item in data.items %}
-                <div class="faq-item">
-                    <button class="faq-question" type="button">
-                        <span>{{ item.question }}</span>
-                        <span class="faq-icon"></span>
-                    </button>
-                    <div class="faq-answer ql-content">
-                        {{ item.answer|safe }}
-                    </div>
-                </div>
+                <details class="faq-item">
+                    <summary class="faq-dt">{{ item.question }}</summary>
+                    <div class="faq-dd ql-content">{{ item.answer|safe }}</div>
+                </details>
             {% endfor %}
         </div>
     </div>
 </section>
-
-<script>
-(function() {
-    var section = document.getElementById('section-{{ section.pk }}');
-    if (!section) return;
-    section.querySelectorAll('.faq-question').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var item = btn.closest('.faq-item');
-            var isOpen = item.classList.contains('open');
-            // Закрываем все
-            section.querySelectorAll('.faq-item.open').forEach(function(el) {
-                el.classList.remove('open');
-            });
-            // Открываем текущий если был закрыт
-            if (!isOpen) item.classList.add('open');
-        });
-    });
-})();
-</script>

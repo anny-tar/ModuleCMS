@@ -556,9 +556,10 @@ p { margin-bottom: 0; }
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.06);
 }
 
-.faq-item dt {
+.faq-dt {
     padding: 1.25rem 1.5rem;
     font-weight: 600;
     font-size: 1rem;
@@ -568,14 +569,14 @@ p { margin-bottom: 0; }
     align-items: center;
     color: var(--color-text);
     user-select: none;
+    list-style: none;
     transition: background 0.15s;
 }
 
-.faq-item dt:hover {
-    background: rgba(0,0,0,0.03);
-}
+.faq-dt::-webkit-details-marker { display: none; }
+.faq-dt::marker { display: none; }
 
-.faq-item dt::after {
+.faq-dt::after {
     content: '+';
     font-size: 1.4rem;
     font-weight: 400;
@@ -586,21 +587,20 @@ p { margin-bottom: 0; }
     margin-left: 1rem;
 }
 
-.faq-item.open dt::after {
+.faq-item[open] .faq-dt::after {
     transform: rotate(45deg);
 }
 
-.faq-item dd {
-    display: none;
+.faq-dt:hover {
+    background: rgba(0,0,0,0.03);
+}
+
+.faq-dd {
     padding: 0 1.5rem 1.25rem;
     font-size: 0.95rem;
     line-height: 1.7;
     opacity: 0.8;
     color: var(--color-text);
-}
-
-.faq-item.open dd {
-    display: block;
 }
 
 /* ── Отзывы ── */
@@ -930,17 +930,6 @@ p { margin-bottom: 0; }
 
 .page-header h1 {
     margin-bottom: 0;
-}
-
-/* ── Подвал ── */
-.footer {
-    background: var(--color-surface);
-    border-top: 1px solid rgba(0,0,0,0.06);
-    padding: 2rem;
-    text-align: center;
-    font-size: 0.875rem;
-    opacity: 0.65;
-    color: var(--color-text);
 }
 
 /* ── Адаптив ── */
@@ -1512,4 +1501,111 @@ a.contacts-item__value:hover {
     background: var(--color-primary);
     color: #fff;
     border-color: var(--color-primary);
+}
+
+/* ── Footer ── */
+.footer {
+    background: var(--color-surface);
+    border-top: 1px solid rgba(0,0,0,0.07);
+    margin-top: auto;
+}
+
+.footer__inner {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 3rem;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+}
+
+.footer__brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.footer__logo {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+}
+
+.footer__name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.footer__nav-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.45;
+    margin-bottom: 1rem;
+}
+
+.footer__nav-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.footer__nav-list a {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    opacity: 0.75;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+.footer__nav-list a:hover {
+    opacity: 1;
+    color: var(--color-primary);
+}
+
+.footer__contacts-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.footer__contacts-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.footer__contacts-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    margin-top: 1px;
+}
+
+.footer__contacts-list a,
+.footer__contacts-list span {
+    color: var(--color-text);
+    opacity: 0.75;
+    transition: opacity 0.2s, color 0.2s;
+}
+
+.footer__contacts-list a:hover {
+    opacity: 1;
+    color: var(--color-primary);
+}
+
+.footer__bottom {
+    border-top: 1px solid rgba(0,0,0,0.06);
+    padding: 1rem 0;
+    font-size: 0.8rem;
+    opacity: 0.45;
+}
+
+@media (max-width: 768px) {
+    .footer__inner {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
 }

@@ -69,12 +69,11 @@ class SiteSettings(models.Model):
                                 choices=NavMode.choices,
                                 default=NavMode.NAME_ONLY)
 
-    # Контактные данные
+    # Контактные данные (отображаются в футере и на странице «Контакты»)
     contact_address = models.TextField('Адрес', blank=True)
     contact_phone   = models.CharField('Телефон', max_length=100, blank=True)
     contact_email   = models.EmailField('Email', blank=True)
     contact_hours   = models.CharField('Режим работы', max_length=200, blank=True)
-    contact_map_url = models.URLField('Ссылка на карту (embed)', max_length=500, blank=True)
 
     class Meta:
         verbose_name        = 'Настройки сайта'
